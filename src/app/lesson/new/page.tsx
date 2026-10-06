@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AGE_GROUPS, DOMAINS } from "@/lib/curriculum";
 import type { Lesson } from "@/lib/schemas/lesson";
+import { lessonFileName, lessonToBlob } from "@/lib/docx/lesson";
 
 const field = "w-full rounded-lg border border-gray-300 px-3 py-2";
 
@@ -41,6 +42,17 @@ export default function NewLessonPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function onExport() {
+    if (!lesson) return;
+    const blob = await lessonToBlob(lesson);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = lessonFileName(lesson);
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -93,11 +105,20 @@ export default function NewLessonPage() {
 
       {lesson && (
         <article className="space-y-5 rounded-xl border border-gray-200 p-6">
-          <header>
-            <h2 className="text-xl font-bold">{lesson.title}</h2>
-            <p className="text-sm text-gray-600">
-              {lesson.ageGroup} · {lesson.domain} · Chủ đề: {lesson.theme} · {lesson.duration}
-            </p>
+          <header className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold">{lesson.title}</h2>
+              <p className="text-sm text-gray-600">
+                {lesson.ageGroup} · {lesson.domain} · Chủ đề: {lesson.theme} · {lesson.duration}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onExport}
+              className="shrink-0 rounded-lg border border-emerald-600 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+            >
+              Tải file Word
+            </button>
           </header>
           <section>
             <h3 className="font-semibold">I. Mục đích yêu cầu</h3>

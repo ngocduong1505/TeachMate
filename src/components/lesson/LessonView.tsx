@@ -18,6 +18,7 @@ type Props = {
   loading: boolean;
   error: string | null;
   cached: boolean;
+  demo: boolean;
   domain: DomainId;
   meta: DocMeta;
   onRegenerate: () => void;
@@ -36,6 +37,7 @@ export function LessonView({
   loading,
   error,
   cached,
+  demo,
   domain,
   meta,
   onRegenerate,
@@ -90,7 +92,7 @@ export function LessonView({
       {loading ? (
         <ProgressBar steps={steps} reached={reached} label={revising ? "Đang chỉnh" : "Đang viết"} />
       ) : (
-        plan && <Toolbar planType={planType} plan={plan} meta={meta} cached={cached} onRegenerate={onRegenerate} />
+        plan && <Toolbar planType={planType} plan={plan} meta={meta} cached={cached} demo={demo} onRegenerate={onRegenerate} />
       )}
 
       {plan && (
@@ -177,12 +179,14 @@ function Toolbar({
   plan,
   meta,
   cached,
+  demo,
   onRegenerate,
 }: {
   planType: PlanType;
   plan: Plan;
   meta: DocMeta;
   cached: boolean;
+  demo: boolean;
   onRegenerate: () => void;
 }) {
   const [copied, setCopied] = useState(false);
@@ -226,13 +230,18 @@ function Toolbar({
         <button onClick={() => window.print()} className={`${btn} bg-white text-stone-700 ring-1 ring-amber-200 hover:bg-amber-50`}>
           🖨 In
         </button>
-        {cached && (
+        {(cached || demo) && (
           <button onClick={onRegenerate} className={`${btn} ml-auto bg-white text-orange-700 ring-1 ring-orange-200 hover:bg-orange-50`}>
-            🔄 Tạo bản khác
+            {demo ? "✨ Soạn bản AI với thông tin này" : "🔄 Tạo bản khác"}
           </button>
         )}
       </div>
-      {cached && (
+      {demo && (
+        <p className="mt-2 text-xs text-stone-500">
+          Đây là giáo án mẫu có sẵn, không dùng AI. Cô vẫn có thể chỉnh sửa, tải Word, sao chép hoặc in như bình thường.
+        </p>
+      )}
+      {cached && !demo && (
         <p className="mt-2 text-xs text-stone-500">
           Đây là bản đã tạo trước đó cho cùng yêu cầu. Bấm &quot;Tạo bản khác&quot; nếu cô muốn bản mới.
         </p>

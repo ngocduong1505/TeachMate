@@ -25,6 +25,7 @@ export function useLessonStream() {
   const [history, setHistory] = useState<Plan[]>([]); // các bản trước đó, mới nhất ở cuối
   const [planType, setPlanType] = useState<PlanType>("lesson");
   const [cached, setCached] = useState(false);
+  const [demo, setDemo] = useState(false); // đang xem giáo án mẫu có sẵn (không qua AI)
   const abortRef = useRef<AbortController | null>(null);
   const lastInput = useRef<LessonRequest | null>(null);
   const planRef = useRef<Plan | null>(null); // bản hiện tại, dùng trong callback
@@ -43,6 +44,7 @@ export function useLessonStream() {
       setRevising(true); // giữ nguyên bản đang xem cho tới khi có chữ mới
     } else {
       lastInput.current = input;
+      setDemo(false);
       setPlanType(input.type);
       setPlan(null);
       setPartial(null);
@@ -123,6 +125,22 @@ export function useLessonStream() {
     if (lastInput.current) void execute(lastInput.current, true);
   }, [execute]);
 
+  /** Nạp ngay một giáo án có sẵn (không gọi AI); vẫn chỉnh sửa, xuất file... như bản vừa soạn. */
+  const load = useCallback((input: LessonRequest, sample: Plan) => {
+    abortRef.current?.abort();
+    lastInput.current = input;
+    setPlanType(input.type);
+    setLoading(false);
+    setRevising(false);
+    setError(null);
+    setReviseError(null);
+    setCached(false);
+    setDemo(true);
+    setHistory([]);
+    setPlan(sample);
+    setPartial(sample as PartialPlan);
+  }, []);
+
   /** Chỉnh bản đang xem theo yêu cầu của cô. */
   const revise = useCallback(
     (instruction: string) => {
@@ -148,6 +166,8 @@ export function useLessonStream() {
     regenerate,
     revise,
     undo,
+    load,
+    demo,
     canUndo: history.length > 0,
     versions: history.length + 1,
     loading,

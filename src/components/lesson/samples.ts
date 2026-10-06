@@ -90,3 +90,11 @@ export const TYPE_HINTS: Record<PlanType, { activityLabel: string; activityPlace
     needsDomain: false, needsDuration: false, needsActivity: false,
   },
 };
+
+/** Thông tin nhập khớp với từng giáo án mẫu có sẵn (xem ngay, không cần AI). */
+export const DEMO_FORM: Record<PlanType, FormValues> = {
+  lesson: v({ type: "lesson", ageGroup: "mg-4-5", domain: "nhan-thuc", theme: "Tết và mùa xuân", activity: "Mô tả ngày Tết quê em", duration: "25" }),
+  corner: v({ type: "corner", ageGroup: "mg-4-5", theme: "Gia đình", branch: "Gia đình thân yêu", activity: "Chơi ở các góc: phân vai, xây dựng, tạo hình, sách truyện", duration: "40" }),
+  outdoor: v({ type: "outdoor", ageGroup: "mg-4-5", domain: "nhan-thuc", theme: "Thực vật", activity: "Quan sát cây bàng; trò chơi “Gieo hạt”; chơi tự do", duration: "30" }),
+  weekly: v({ type: "weekly", ageGroup: "mg-3-4", theme: "Thế giới động vật", branch: "Con vật nuôi trong gia đình" }),
+};

@@ -2,15 +2,9 @@
 
 import { useCallback, useRef, useState } from "react";
 import { Allow, parse } from "partial-json";
-import { lessonSchema, type Lesson, type LessonRequest } from "@/lib/schemas/lesson";
+import { schemaByType, type DeepPartial, type LessonRequest, type Plan, type PlanType } from "@/lib/schemas/lesson";
 
-export type PartialLesson = {
-  [K in keyof Lesson]?: Lesson[K] extends (infer U)[]
-    ? Partial<U>[]
-    : Lesson[K] extends object
-      ? { [P in keyof Lesson[K]]?: Lesson[K][P] }
-      : Lesson[K];
-};
+export type PartialPlan = DeepPartial<Plan>;
 
 type StreamEvent =
   | { t: "meta"; cached?: boolean }
@@ -22,20 +16,22 @@ type StreamEvent =
 export function useLessonStream() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [partial, setPartial] = useState<PartialLesson | null>(null);
-  const [lesson, setLesson] = useState<Lesson | null>(null); // chỉ có khi stream hoàn tất và hợp lệ
+  const [partial, setPartial] = useState<PartialPlan | null>(null);
+  const [plan, setPlan] = useState<Plan | null>(null); // chỉ có khi stream hoàn tất và hợp lệ
+  const [planType, setPlanType] = useState<PlanType>("lesson");
   const [cached, setCached] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const lastInput = useRef<LessonRequest | null>(null);
 
   const run = useCallback(async (input: LessonRequest, fresh = false) => {
     lastInput.current = input;
+    setPlanType(input.type);
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     setLoading(true);
     setError(null);
-    setLesson(null);
+    setPlan(null);
     setPartial(null);
     setCached(false);
     try {
@@ -68,17 +64,17 @@ export function useLessonStream() {
           } else if (ev.t === "chunk") {
             json += ev.d;
             try {
-              setPartial(parse(json, Allow.ALL) as PartialLesson);
+              setPartial(parse(json, Allow.ALL) as PartialPlan);
             } catch {
               /* chunk cắt giữa token, đợi chunk sau */
             }
           } else if (ev.t === "error") {
             throw new Error(ev.m ?? "Có lỗi xảy ra");
           } else if (ev.t === "done") {
-            const result = lessonSchema.safeParse(JSON.parse(json));
+            const result = schemaByType[input.type].safeParse(JSON.parse(json));
             if (!result.success) throw new Error("Giáo án tạo ra không hợp lệ, vui lòng thử lại.");
-            setLesson(result.data);
-            setPartial(result.data);
+            setPlan(result.data as Plan);
+            setPartial(result.data as PartialPlan);
             finished = true;
           }
         }
@@ -96,5 +92,5 @@ export function useLessonStream() {
     if (lastInput.current) void run(lastInput.current, true);
   }, [run]);
 
-  return { run, regenerate, loading, error, partial, lesson, cached };
+  return { run, regenerate, loading, error, partial, plan, planType, cached };
 }

@@ -42,3 +42,49 @@ export async function generateStructured<T extends z.ZodType>(
   }
   throw lastError;
 }
+
+/**
+ * Stream JSON text theo schema. Chỉ retry/fallback khi lỗi xảy ra trước chunk đầu tiên
+ * (sau đó client đã nhận dữ liệu nên không thể chạy lại một cách trong suốt).
+ * Chunk đầu tiên được đọc trước khi trả về, nên lỗi khởi tạo (429...) ném ra ngay tại đây.
+ */
+export async function generateStructuredStream(
+  prompt: string,
+  schema: z.ZodType,
+): Promise<AsyncGenerator<string>> {
+  if (!process.env.GEMINI_API_KEY) throw new Error("Thiếu GEMINI_API_KEY");
+  const models = [
+    process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+    process.env.GEMINI_FALLBACK_MODEL ?? "gemini-2.5-flash-lite",
+  ];
+  let lastError: unknown;
+  for (const model of models) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const stream = await ai().models.generateContentStream({
+          model,
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            responseJsonSchema: z.toJSONSchema(schema),
+          },
+        });
+        const it = stream[Symbol.asyncIterator]();
+        let first = await it.next();
+        while (!first.done && !first.value.text) first = await it.next();
+        return (async function* () {
+          if (first.done) return;
+          yield first.value.text!;
+          for (let n = await it.next(); !n.done; n = await it.next()) {
+            if (n.value.text) yield n.value.text;
+          }
+        })();
+      } catch (e) {
+        lastError = e;
+        if (!isRetryable(e)) throw e;
+        await sleep(1500 * (attempt + 1));
+      }
+    }
+  }
+  throw lastError;
+}

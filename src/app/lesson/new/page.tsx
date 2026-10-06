@@ -1,13 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Allow, parse } from "partial-json";
 import { AGE_GROUPS, DOMAINS } from "@/lib/curriculum";
-import type { Lesson } from "@/lib/schemas/lesson";
+import { lessonSchema, type Lesson } from "@/lib/schemas/lesson";
 import { lessonFileName, lessonToBlob } from "@/lib/docx/lesson";
 
 const field = "w-full rounded-lg border border-gray-300 px-3 py-2";
 
-function List({ items }: { items: string[] }) {
+type PartialLesson = {
+  [K in keyof Lesson]?: Lesson[K] extends (infer U)[]
+    ? Partial<U>[]
+    : Lesson[K] extends object
+      ? { [P in keyof Lesson[K]]?: Lesson[K][P] }
+      : Lesson[K];
+};
+
+function List({ items }: { items?: (string | undefined)[] }) {
+  if (!items?.length) return null;
   return (
     <ul className="list-disc space-y-1 pl-6">
       {items.map((t, i) => (
@@ -17,30 +27,82 @@ function List({ items }: { items: string[] }) {
   );
 }
 
+function Sub({ title, items }: { title: string; items?: (string | undefined)[] }) {
+  if (!items?.length) return null;
+  return (
+    <>
+      <p className="mt-2 font-medium">{title}</p>
+      <List items={items} />
+    </>
+  );
+}
+
 export default function NewLessonPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [partial, setPartial] = useState<PartialLesson | null>(null);
+  const [lesson, setLesson] = useState<Lesson | null>(null); // chỉ có khi stream hoàn tất và hợp lệ
+  const abortRef = useRef<AbortController | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const body = Object.fromEntries(new FormData(e.currentTarget));
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     setLoading(true);
     setError(null);
     setLesson(null);
+    setPartial(null);
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: ctrl.signal,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Có lỗi xảy ra");
-      setLesson(data.lesson);
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Có lỗi xảy ra");
+      }
+
+      const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+      let buffer = "";
+      let json = "";
+      let finished = false;
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += value;
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const ev = JSON.parse(line) as { t: string; d?: string; m?: string };
+          if (ev.t === "chunk") {
+            json += ev.d;
+            try {
+              setPartial(parse(json, Allow.ALL) as PartialLesson);
+            } catch {
+              /* chunk cắt giữa token, đợi chunk sau */
+            }
+          } else if (ev.t === "error") {
+            throw new Error(ev.m ?? "Có lỗi xảy ra");
+          } else if (ev.t === "done") {
+            const result = lessonSchema.safeParse(JSON.parse(json));
+            if (!result.success) throw new Error("Giáo án tạo ra không hợp lệ, vui lòng thử lại.");
+            setLesson(result.data);
+            setPartial(result.data);
+            finished = true;
+          }
+        }
+      }
+      if (!finished) throw new Error("Kết nối bị gián đoạn, vui lòng thử lại.");
     } catch (err) {
+      if ((err as Error).name === "AbortError") return;
       setError(err instanceof Error ? err.message : "Có lỗi xảy ra");
     } finally {
-      setLoading(false);
+      if (abortRef.current === ctrl) setLoading(false);
     }
   }
 
@@ -103,50 +165,68 @@ export default function NewLessonPage() {
 
       {error && <p className="rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}
 
-      {lesson && (
+      {partial && (
         <article className="space-y-5 rounded-xl border border-gray-200 p-6">
           <header className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold">{lesson.title}</h2>
+              <h2 className="text-xl font-bold">{partial.title}</h2>
               <p className="text-sm text-gray-600">
-                {lesson.ageGroup} · {lesson.domain} · Chủ đề: {lesson.theme} · {lesson.duration}
+                {[partial.ageGroup, partial.domain, partial.theme && `Chủ đề: ${partial.theme}`, partial.duration]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={onExport}
-              className="shrink-0 rounded-lg border border-emerald-600 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
-            >
-              Tải file Word
-            </button>
+            {lesson ? (
+              <button
+                type="button"
+                onClick={onExport}
+                className="shrink-0 rounded-lg border border-emerald-600 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+              >
+                Tải file Word
+              </button>
+            ) : (
+              <span className="shrink-0 animate-pulse text-sm text-gray-500">Đang viết...</span>
+            )}
           </header>
-          <section>
-            <h3 className="font-semibold">I. Mục đích yêu cầu</h3>
-            <p className="mt-2 font-medium">1. Kiến thức</p><List items={lesson.objectives.knowledge} />
-            <p className="mt-2 font-medium">2. Kỹ năng</p><List items={lesson.objectives.skills} />
-            <p className="mt-2 font-medium">3. Thái độ</p><List items={lesson.objectives.attitude} />
-          </section>
-          <section>
-            <h3 className="font-semibold">II. Chuẩn bị</h3>
-            <p className="mt-2 font-medium">Của cô</p><List items={lesson.preparation.teacher} />
-            <p className="mt-2 font-medium">Của trẻ</p><List items={lesson.preparation.children} />
-          </section>
-          <section>
-            <h3 className="font-semibold">III. Tiến hành</h3>
-            <div className="mt-2 space-y-3">
-              {lesson.procedure.map((p, i) => (
-                <div key={i} className="rounded-lg bg-gray-50 p-3">
-                  <p className="font-medium">{p.step}</p>
-                  <p className="mt-1 text-sm"><b>Hoạt động của cô:</b> {p.teacherActions}</p>
-                  <p className="mt-1 text-sm"><b>Hoạt động của trẻ:</b> {p.childrenActions}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-          <section>
-            <h3 className="font-semibold">IV. Mở rộng</h3>
-            <p className="mt-2">{lesson.extension}</p>
-          </section>
+          {partial.objectives && (
+            <section>
+              <h3 className="font-semibold">I. Mục đích yêu cầu</h3>
+              <Sub title="1. Kiến thức" items={partial.objectives.knowledge} />
+              <Sub title="2. Kỹ năng" items={partial.objectives.skills} />
+              <Sub title="3. Thái độ" items={partial.objectives.attitude} />
+            </section>
+          )}
+          {partial.preparation && (
+            <section>
+              <h3 className="font-semibold">II. Chuẩn bị</h3>
+              <Sub title="Của cô" items={partial.preparation.teacher} />
+              <Sub title="Của trẻ" items={partial.preparation.children} />
+            </section>
+          )}
+          {!!partial.procedure?.length && (
+            <section>
+              <h3 className="font-semibold">III. Tiến hành</h3>
+              <div className="mt-2 space-y-3">
+                {partial.procedure.map((p, i) => (
+                  <div key={i} className="rounded-lg bg-gray-50 p-3">
+                    <p className="font-medium">{p.step}</p>
+                    {p.teacherActions && (
+                      <p className="mt-1 text-sm"><b>Hoạt động của cô:</b> {p.teacherActions}</p>
+                    )}
+                    {p.childrenActions && (
+                      <p className="mt-1 text-sm"><b>Hoạt động của trẻ:</b> {p.childrenActions}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+          {partial.extension && (
+            <section>
+              <h3 className="font-semibold">IV. Mở rộng</h3>
+              <p className="mt-2">{partial.extension}</p>
+            </section>
+          )}
         </article>
       )}
     </main>

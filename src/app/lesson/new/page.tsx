@@ -42,11 +42,19 @@ export default function NewLessonPage() {
   const [error, setError] = useState<string | null>(null);
   const [partial, setPartial] = useState<PartialLesson | null>(null);
   const [lesson, setLesson] = useState<Lesson | null>(null); // chỉ có khi stream hoàn tất và hợp lệ
+  const [cached, setCached] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const lastInput = useRef<Record<string, unknown> | null>(null);
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const body = Object.fromEntries(new FormData(e.currentTarget));
+    lastInput.current = Object.fromEntries(new FormData(e.currentTarget));
+    return generate(false);
+  }
+
+  async function generate(fresh: boolean) {
+    if (!lastInput.current) return;
+    const body = { ...lastInput.current, fresh };
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -54,6 +62,7 @@ export default function NewLessonPage() {
     setError(null);
     setLesson(null);
     setPartial(null);
+    setCached(false);
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -79,7 +88,9 @@ export default function NewLessonPage() {
         for (const line of lines) {
           if (!line.trim()) continue;
           const ev = JSON.parse(line) as { t: string; d?: string; m?: string };
-          if (ev.t === "chunk") {
+          if (ev.t === "meta") {
+            setCached(!!(ev as { cached?: boolean }).cached);
+          } else if (ev.t === "chunk") {
             json += ev.d;
             try {
               setPartial(parse(json, Allow.ALL) as PartialLesson);
@@ -167,6 +178,11 @@ export default function NewLessonPage() {
 
       {partial && (
         <article className="space-y-5 rounded-xl border border-gray-200 p-6">
+          {cached && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Đây là giáo án đã tạo trước đó cho cùng yêu cầu. Bấm &quot;Tạo bản khác&quot; nếu muốn bản mới.
+            </p>
+          )}
           <header className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold">{partial.title}</h2>
@@ -177,6 +193,7 @@ export default function NewLessonPage() {
               </p>
             </div>
             {lesson ? (
+              <div className="flex shrink-0 flex-col items-end gap-2">
               <button
                 type="button"
                 onClick={onExport}
@@ -184,6 +201,17 @@ export default function NewLessonPage() {
               >
                 Tải file Word
               </button>
+              {cached && (
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => generate(true)}
+                  className="text-sm text-gray-600 underline hover:text-gray-900"
+                >
+                  Tạo bản khác
+                </button>
+              )}
+              </div>
             ) : (
               <span className="shrink-0 animate-pulse text-sm text-gray-500">Đang viết...</span>
             )}

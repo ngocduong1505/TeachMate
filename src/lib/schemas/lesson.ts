@@ -6,6 +6,7 @@ export const requestSchema = z.object({
   theme: z.string().min(1).max(100),
   activity: z.string().min(1).max(150),
   notes: z.string().max(500).optional(),
+  fresh: z.boolean().optional(), // bỏ qua cache, tạo bản mới
 });
 export type LessonRequest = z.infer<typeof requestSchema>;
 

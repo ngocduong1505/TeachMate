@@ -319,14 +319,14 @@ export function DocumentPaper({ type, partial, meta }: { type: PlanType; partial
           weekly ? "max-w-[1180px]" : "max-w-[900px]"
         }`}
       >
-        <div className="grid grid-cols-[1fr_1.2fr] gap-6 text-[15px] font-bold">
+        <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 text-[15px] font-bold">
           <div>
             <p>ĐƠN VỊ: {meta.school ? meta.school.toUpperCase() : "……………………………"}</p>
             <p>LỚP: {meta.className || "……………………………"}</p>
           </div>
           <div className="text-center">
-            <p>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
-            <p className="inline-block border-b border-black pb-0.5">Độc lập - Tự do - Hạnh phúc</p>
+            <p className="whitespace-nowrap">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+            <p className="inline-block whitespace-nowrap border-b border-black pb-0.5">Độc lập - Tự do - Hạnh phúc</p>
           </div>
         </div>
 

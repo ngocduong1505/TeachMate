@@ -21,16 +21,16 @@ export function CardsView({ partial }: { partial: DeepPartial<Lesson> }) {
 
       {!!partial.procedure?.length && (
         <Section emoji="🎪" title="III. Tiến hành" tint="bg-sky-50">
-          <ol className="relative space-y-4 border-l-2 border-dashed border-sky-200 pl-6">
+          <ol className="relative space-y-5 before:absolute before:bottom-3 before:left-4 before:top-3 before:border-l-2 before:border-dashed before:border-sky-200">
             {partial.procedure.map((p, i) => (
-              <li key={i} className="relative animate-rise">
-                <span className="absolute -left-[37px] grid size-7 place-items-center rounded-full bg-sky-500 text-sm font-extrabold text-white ring-4 ring-sky-50">
+              <li key={i} className="relative animate-rise pl-12">
+                <span className="absolute left-0 top-0 grid size-8 place-items-center rounded-full bg-sky-500 text-sm font-extrabold text-white ring-4 ring-sky-50">
                   {i + 1}
                 </span>
-                <h4 className="font-display text-lg font-bold text-ink">
+                <h4 className="flex min-h-8 flex-wrap items-center gap-x-2 gap-y-1 font-display text-lg font-bold text-ink">
                   {p.step}
                   {p.time && (
-                    <span className="ml-2 rounded-full bg-sky-100 px-2.5 py-0.5 align-middle text-xs font-bold text-sky-700">
+                    <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-bold text-sky-700">
                       ⏱ {p.time}
                     </span>
                   )}
@@ -39,13 +39,13 @@ export function CardsView({ partial }: { partial: DeepPartial<Lesson> }) {
                   {p.teacherActions && (
                     <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-sky-100">
                       <p className="mb-1 text-xs font-extrabold uppercase tracking-wide text-sky-600">👩‍🏫 Hoạt động của cô</p>
-                      <p className="whitespace-pre-line text-[15px] leading-relaxed text-stone-700">{p.teacherActions}</p>
+                      <p className="whitespace-pre-line text-base leading-relaxed text-stone-700">{p.teacherActions}</p>
                     </div>
                   )}
                   {p.childrenActions && (
                     <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-pink-100">
                       <p className="mb-1 text-xs font-extrabold uppercase tracking-wide text-pink-600">🧒 Hoạt động của trẻ</p>
-                      <p className="whitespace-pre-line text-[15px] leading-relaxed text-stone-700">{p.childrenActions}</p>
+                      <p className="whitespace-pre-line text-base leading-relaxed text-stone-700">{p.childrenActions}</p>
                     </div>
                   )}
                 </div>
@@ -83,7 +83,7 @@ function Group({ title, items, dot }: { title: string; items?: (string | undefin
       <p className="mb-1.5 text-sm font-extrabold text-stone-600">{title}</p>
       <ul className="space-y-1.5">
         {items.map((t, i) => (
-          <li key={i} className="flex gap-2.5 text-[15px] leading-relaxed text-stone-700">
+          <li key={i} className="flex gap-2.5 text-base leading-relaxed text-stone-700">
             <span className={`mt-2 size-2 shrink-0 rounded-full ${dot}`} />
             <span>{t}</span>
           </li>

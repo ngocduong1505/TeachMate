@@ -69,14 +69,15 @@ function headerBlock(meta: DocMeta) {
     para(`ĐƠN VỊ: ${(meta.school || "...............................").toUpperCase()}`, { bold: true, after: 40 }),
     para(`LỚP: ${meta.className || "..............................."}`, { bold: true }),
   ];
+  // Quốc hiệu 12pt, in hoa đậm; cột phải đủ rộng để không bị xuống dòng (khổ chữ rộng ~9 cm).
   const right = [
-    para("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", { bold: true, align: AlignmentType.CENTER, after: 40 }),
+    para("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", { bold: true, size: 24, align: AlignmentType.CENTER, after: 40 }),
     para("Độc lập - Tự do - Hạnh phúc", { bold: true, align: AlignmentType.CENTER }),
   ];
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: noBorders,
-    rows: [new TableRow({ children: [cell(45, left), cell(55, right)] })],
+    rows: [new TableRow({ children: [cell(36, left), cell(64, right)] })],
   });
 }
 

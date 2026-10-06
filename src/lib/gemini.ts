@@ -7,7 +7,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function isRetryable(e: unknown) {
   const s = (e as { status?: number })?.status;
-  return s === 429 || s === 503;
+  return s === 429 || s === 503 || s === 404; // 404: model đã bị ngừng, thử model kế tiếp
 }
 
 /** Sinh JSON theo schema; retry khi 429/503 rồi chuyển sang model dự phòng. */
@@ -17,8 +17,8 @@ export async function generateStructured<T extends z.ZodType>(
 ): Promise<z.infer<T>> {
   if (!process.env.GEMINI_API_KEY) throw new Error("Thiếu GEMINI_API_KEY");
   const models = [
-    process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
-    process.env.GEMINI_FALLBACK_MODEL ?? "gemini-2.5-flash-lite",
+    process.env.GEMINI_MODEL ?? "gemini-flash-latest",
+    process.env.GEMINI_FALLBACK_MODEL ?? "gemini-flash-lite-latest",
   ];
   let lastError: unknown;
   for (const model of models) {
@@ -54,8 +54,8 @@ export async function generateStructuredStream(
 ): Promise<AsyncGenerator<string>> {
   if (!process.env.GEMINI_API_KEY) throw new Error("Thiếu GEMINI_API_KEY");
   const models = [
-    process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
-    process.env.GEMINI_FALLBACK_MODEL ?? "gemini-2.5-flash-lite",
+    process.env.GEMINI_MODEL ?? "gemini-flash-latest",
+    process.env.GEMINI_FALLBACK_MODEL ?? "gemini-flash-lite-latest",
   ];
   let lastError: unknown;
   for (const model of models) {

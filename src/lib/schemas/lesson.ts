@@ -142,6 +142,7 @@ export type DeepPartial<T> = T extends (infer U)[]
 /** Thông tin đầu trang/chữ ký của giáo án. Chỉ dùng ở trình duyệt, không gửi cho AI. */
 export type DocMeta = {
   school?: string;
+  group?: string; // tổ / khối chuyên môn
   className?: string;
   teacher?: string;
   date?: string; // dd/mm/yyyy

@@ -64,20 +64,19 @@ const headCell = (width: number, text: string) =>
 
 const grid = (rows: TableRow[]) => new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: gridBorders, rows });
 
+const DOTS = "...............................";
+
+/** Đầu trang theo khung kế hoạch bài dạy (Phụ lục IV, CV 5512/BGDĐT-GDTrH): Trường, Tổ | Họ và tên giáo viên. */
 function headerBlock(meta: DocMeta) {
   const left = [
-    para(`ĐƠN VỊ: ${(meta.school || "...............................").toUpperCase()}`, { bold: true, after: 40 }),
-    para(`LỚP: ${meta.className || "..............................."}`, { bold: true }),
+    para(`Trường: ${meta.school || DOTS}`, { bold: true, after: 40 }),
+    para(`Tổ: ${meta.group || DOTS}`, { bold: true }),
   ];
-  // Quốc hiệu 12pt, in hoa đậm; cột phải đủ rộng để không bị xuống dòng (khổ chữ rộng ~9 cm).
-  const right = [
-    para("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM", { bold: true, size: 24, align: AlignmentType.CENTER, after: 40 }),
-    para("Độc lập - Tự do - Hạnh phúc", { bold: true, align: AlignmentType.CENTER }),
-  ];
+  const right = [para(`Họ và tên giáo viên: ${meta.teacher || DOTS}`, { bold: true })];
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: noBorders,
-    rows: [new TableRow({ children: [cell(36, left), cell(64, right)] })],
+    rows: [new TableRow({ children: [cell(48, left), cell(52, right)] })],
   });
 }
 
@@ -258,20 +257,24 @@ export function planToDocument(type: PlanType, plan: Plan, meta: DocMeta = {}) {
         },
         children: [
           headerBlock(meta),
-          para(" ", { after: 120 }),
+          para(" ", { after: 80 }),
           para(info?.doc ?? "KẾ HOẠCH", { bold: true, size: 32, align: AlignmentType.CENTER, after: 60 }),
-          para(`${type === "weekly" ? "TÊN KẾ HOẠCH" : "ĐỀ TÀI"}: ${p.title.toUpperCase()}`, {
+          para(`${type === "weekly" ? "TÊN KẾ HOẠCH" : "TÊN BÀI DẠY"}: ${p.title.toUpperCase()}`, {
             bold: true,
             align: AlignmentType.CENTER,
-            after: 160,
+            after: 60,
           }),
+          para(
+            type === "weekly"
+              ? `Lớp: ${meta.className || DOTS}`
+              : `Lĩnh vực/Hoạt động giáo dục: ${p.domain}; lớp: ${meta.className || DOTS}`,
+            { align: AlignmentType.CENTER, after: 40 },
+          ),
+          ...(type === "weekly" ? [] : [para(`Thời gian thực hiện: ${p.duration}`, { align: AlignmentType.CENTER, after: 160 })]),
           ...infoLines([
-            ["Lĩnh vực", type === "weekly" ? undefined : p.domain],
             ["Chủ đề", p.theme],
             ["Chủ đề nhánh", type === "weekly" ? p.branch : undefined],
             ["Độ tuổi", p.ageGroup],
-            ["Thời gian", type === "weekly" ? undefined : p.duration],
-            ["Người thực hiện", meta.teacher],
             ["Ngày soạn", meta.date],
           ]),
           ...typeBody(type, plan),

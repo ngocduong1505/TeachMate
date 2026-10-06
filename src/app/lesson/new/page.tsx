@@ -53,6 +53,7 @@ export default function NewLessonPage() {
   const ageLabel = AGE_GROUPS.find((a) => a.id === submitted.ageGroup)?.label ?? "";
   const meta: DocMeta = {
     school: profile.school,
+    group: profile.group,
     className: profile.className ? `${profile.className} (${ageLabel.match(/\((.*)\)/)?.[1] ?? ""})` : ageLabel,
     teacher: profile.teacher,
     date: today,

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { cacheKey, getCachedLesson, setCachedLesson } from "@/lib/cache";
+import { cacheKey, getCachedPlan, setCachedPlan } from "@/lib/cache";
 import { generateStructuredStream } from "@/lib/gemini";
-import { buildLessonPrompt } from "@/lib/prompts/lesson";
+import { buildPrompt } from "@/lib/prompts/lesson";
 import { checkRateLimit, clientId } from "@/lib/ratelimit";
-import { lessonSchema, requestSchema } from "@/lib/schemas/lesson";
+import { requestSchema, schemaByType } from "@/lib/schemas/lesson";
 
 export const maxDuration = 120;
 
@@ -26,9 +26,10 @@ export async function POST(request: Request) {
   }
   const input = parsed.data;
   const key = cacheKey(input);
+  const schema = schemaByType[input.type];
 
   if (!input.fresh) {
-    const cached = await getCachedLesson(key);
+    const cached = await getCachedPlan(key, input.type);
     if (cached) {
       const json = JSON.stringify(cached);
       return ndjson(
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
 
   let chunks: AsyncGenerator<string>;
   try {
-    chunks = await generateStructuredStream(buildLessonPrompt(input), lessonSchema);
+    chunks = await generateStructuredStream(buildPrompt(input), schema);
   } catch (e) {
     const status = (e as { status?: number })?.status;
     console.error("generate failed", e);
@@ -80,8 +81,8 @@ export async function POST(request: Request) {
             text += d;
             controller.enqueue(line({ t: "chunk", d }));
           }
-          const lesson = lessonSchema.parse(JSON.parse(text));
-          await setCachedLesson(key, lesson);
+          const plan = schema.parse(JSON.parse(text));
+          await setCachedPlan(key, plan);
           controller.enqueue(line({ t: "done" }));
         } catch (e) {
           console.error("stream failed", e);

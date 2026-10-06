@@ -18,3 +18,13 @@ export type DomainId = (typeof DOMAINS)[number]["id"];
 
 export const ageGroupById = (id: string) => AGE_GROUPS.find((a) => a.id === id);
 export const domainById = (id: string) => DOMAINS.find((d) => d.id === id);
+
+export const PLAN_TYPE_INFO = [
+  { id: "lesson", label: "Tiết học có chủ đích", short: "Tiết học", doc: "GIÁO ÁN TỔ CHỨC HOẠT ĐỘNG HỌC", desc: "Giáo án một tiết học theo lĩnh vực" },
+  { id: "corner", label: "Hoạt động góc", short: "Hoạt động góc", doc: "KẾ HOẠCH HOẠT ĐỘNG GÓC", desc: "Các góc chơi, đồ dùng, cách hướng dẫn" },
+  { id: "outdoor", label: "Hoạt động ngoài trời", short: "Ngoài trời", doc: "KẾ HOẠCH HOẠT ĐỘNG NGOÀI TRỜI", desc: "Quan sát, trò chơi vận động, chơi tự do" },
+  { id: "weekly", label: "Kế hoạch tuần", short: "Kế hoạch tuần", doc: "KẾ HOẠCH GIÁO DỤC TUẦN", desc: "Cả tuần từ thứ Hai đến thứ Sáu" },
+] as const;
+
+export type PlanTypeId = (typeof PLAN_TYPE_INFO)[number]["id"];
+export const planTypeById = (id: string) => PLAN_TYPE_INFO.find((t) => t.id === id);

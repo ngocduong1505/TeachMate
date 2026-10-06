@@ -1,3 +1,4 @@
+import type { PlanType } from "@/lib/schemas/lesson";
 import type { AgeGroupId, DomainId } from "@/lib/curriculum";
 
 /** Màu và biểu tượng riêng cho từng lĩnh vực (class Tailwind phải viết đầy đủ để không bị purge). */
@@ -48,4 +49,55 @@ export const THEME_SUGGESTIONS = [
 export const shortDomainLabel = (label: string) => {
   const s = label.replace("Phát triển ", "");
   return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
+/** Màu/biểu tượng riêng cho từng loại kế hoạch. */
+export const TYPE_STYLE: Record<
+  PlanType,
+  { emoji: string; header: string; tile: string; tileOn: string; chip: string }
+> = {
+  lesson: {
+    emoji: "📖", header: "from-sky-400 to-cyan-400", tile: "bg-sky-50",
+    tileOn: "border-sky-400 ring-sky-100", chip: "bg-sky-100 text-sky-800",
+  },
+  corner: {
+    emoji: "🧩", header: "from-rose-400 to-pink-400", tile: "bg-rose-50",
+    tileOn: "border-rose-400 ring-rose-100", chip: "bg-rose-100 text-rose-800",
+  },
+  outdoor: {
+    emoji: "🌳", header: "from-lime-500 to-emerald-400", tile: "bg-emerald-50",
+    tileOn: "border-emerald-400 ring-emerald-100", chip: "bg-emerald-100 text-emerald-800",
+  },
+  weekly: {
+    emoji: "🗓️", header: "from-indigo-400 to-violet-400", tile: "bg-violet-50",
+    tileOn: "border-violet-400 ring-violet-100", chip: "bg-violet-100 text-violet-800",
+  },
+};
+
+/** Các phần của từng loại, dùng cho thanh tiến trình khi AI đang viết. */
+export const STEPS_BY_TYPE: Record<PlanType, { key: string; label: string; emoji: string }[]> = {
+  lesson: [
+    { key: "objectives", label: "Mục tiêu", emoji: "🎯" },
+    { key: "preparation", label: "Chuẩn bị", emoji: "🧺" },
+    { key: "procedure", label: "Tiến hành", emoji: "🎪" },
+    { key: "extension", label: "Mở rộng", emoji: "🌱" },
+  ],
+  corner: [
+    { key: "objectives", label: "Mục tiêu", emoji: "🎯" },
+    { key: "preparation", label: "Chuẩn bị", emoji: "🧺" },
+    { key: "corners", label: "Các góc chơi", emoji: "🧩" },
+    { key: "procedure", label: "Tiến hành", emoji: "🎪" },
+  ],
+  outdoor: [
+    { key: "objectives", label: "Mục tiêu", emoji: "🎯" },
+    { key: "preparation", label: "Chuẩn bị", emoji: "🧺" },
+    { key: "safety", label: "An toàn", emoji: "🦺" },
+    { key: "procedure", label: "Tiến hành", emoji: "🎪" },
+  ],
+  weekly: [
+    { key: "goals", label: "Mục tiêu", emoji: "🎯" },
+    { key: "preparation", label: "Chuẩn bị", emoji: "🧺" },
+    { key: "days", label: "Các ngày", emoji: "🗓️" },
+    { key: "notes", label: "Ghi chú", emoji: "📝" },
+  ],
 };

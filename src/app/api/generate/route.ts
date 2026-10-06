@@ -85,7 +85,15 @@ export async function POST(request: Request) {
           controller.enqueue(line({ t: "done" }));
         } catch (e) {
           console.error("stream failed", e);
-          controller.enqueue(line({ t: "error", m: "Giáo án tạo ra không hợp lệ, vui lòng thử lại." }));
+          const invalid = e instanceof SyntaxError || (e as { name?: string })?.name === "ZodError";
+          controller.enqueue(
+            line({
+              t: "error",
+              m: invalid
+                ? "Giáo án tạo ra không hợp lệ, vui lòng thử lại."
+                : "Kết nối tới AI bị gián đoạn giữa chừng, vui lòng thử lại.",
+            }),
+          );
         } finally {
           controller.close();
         }

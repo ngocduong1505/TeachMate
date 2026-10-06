@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { AGE_GROUPS, DOMAINS, type AgeGroupId, type DomainId } from "@/lib/curriculum";
-import type { LessonRequest } from "@/lib/schemas/lesson";
+import { AGE_GROUPS, DOMAINS } from "@/lib/curriculum";
+import type { Profile } from "@/hooks/useProfile";
+import { DURATIONS, type FormValues } from "./samples";
 import { AGE_EMOJI, DOMAIN_STYLE, THEME_SUGGESTIONS, shortDomainLabel } from "./theme";
 
 const input =
@@ -19,18 +20,25 @@ function Label({ n, children }: { n: number; children: React.ReactNode }) {
   );
 }
 
-export function LessonForm({ loading, onSubmit }: { loading: boolean; onSubmit: (v: LessonRequest) => void }) {
-  const [ageGroup, setAgeGroup] = useState<AgeGroupId>("mg-4-5");
-  const [domain, setDomain] = useState<DomainId>("nhan-thuc");
-  const [theme, setTheme] = useState("");
-  const [activity, setActivity] = useState("");
-  const [notes, setNotes] = useState("");
+type Props = {
+  values: FormValues;
+  onChange: (patch: Partial<FormValues>) => void;
+  profile: Profile;
+  onProfileChange: (patch: Partial<Profile>) => void;
+  loading: boolean;
+  onSubmit: () => void;
+};
+
+export function LessonForm({ values: v, onChange, profile, onProfileChange, loading, onSubmit }: Props) {
+  const [showProfile, setShowProfile] = useState(false);
+  const age = AGE_GROUPS.find((a) => a.id === v.ageGroup);
 
   return (
     <form
+      id="lesson-form"
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit({ ageGroup, domain, theme: theme.trim(), activity: activity.trim(), notes: notes.trim() || undefined });
+        onSubmit();
       }}
       className="space-y-7 rounded-3xl border-2 border-amber-100 bg-white/80 p-6 shadow-xl shadow-amber-100/60 backdrop-blur"
     >
@@ -38,12 +46,12 @@ export function LessonForm({ loading, onSubmit }: { loading: boolean; onSubmit: 
         <Label n={1}>Lớp của cô là?</Label>
         <div className="grid grid-cols-2 gap-2.5">
           {AGE_GROUPS.map((a) => {
-            const on = a.id === ageGroup;
+            const on = a.id === v.ageGroup;
             return (
               <button
                 type="button"
                 key={a.id}
-                onClick={() => setAgeGroup(a.id)}
+                onClick={() => onChange({ ageGroup: a.id })}
                 aria-pressed={on}
                 className={`rounded-2xl border-2 px-3 py-3 text-left transition hover:-translate-y-0.5 ${
                   on ? "border-teal-400 bg-teal-50 ring-4 ring-teal-100" : "border-amber-100 bg-white hover:border-teal-200"
@@ -63,12 +71,12 @@ export function LessonForm({ loading, onSubmit }: { loading: boolean; onSubmit: 
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {DOMAINS.map((d, i) => {
             const s = DOMAIN_STYLE[d.id];
-            const on = d.id === domain;
+            const on = d.id === v.domain;
             return (
               <button
                 type="button"
                 key={d.id}
-                onClick={() => setDomain(d.id)}
+                onClick={() => onChange({ domain: d.id })}
                 aria-pressed={on}
                 className={`flex items-center gap-3 rounded-2xl border-2 p-3 text-left transition hover:-translate-y-0.5 ${
                   i === DOMAINS.length - 1 ? "sm:col-span-2" : ""
@@ -78,9 +86,7 @@ export function LessonForm({ loading, onSubmit }: { loading: boolean; onSubmit: 
                   {s.emoji}
                 </span>
                 <span>
-                  <span className="block text-sm font-bold leading-tight text-ink">
-                    {shortDomainLabel(d.label)}
-                  </span>
+                  <span className="block text-sm font-bold leading-tight text-ink">{shortDomainLabel(d.label)}</span>
                   <span className="text-xs text-stone-500">{s.blurb}</span>
                 </span>
               </button>
@@ -94,8 +100,8 @@ export function LessonForm({ loading, onSubmit }: { loading: boolean; onSubmit: 
         <input
           required
           maxLength={100}
-          value={theme}
-          onChange={(e) => setTheme(e.target.value)}
+          value={v.theme}
+          onChange={(e) => onChange({ theme: e.target.value })}
           className={input}
           placeholder="Chủ đề, ví dụ: Thế giới động vật"
         />
@@ -104,9 +110,9 @@ export function LessonForm({ loading, onSubmit }: { loading: boolean; onSubmit: 
             <button
               type="button"
               key={t}
-              onClick={() => setTheme(t)}
+              onClick={() => onChange({ theme: t })}
               className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
-                theme === t ? "bg-teal-600 text-white" : "bg-amber-50 text-amber-800 hover:bg-amber-100"
+                v.theme === t ? "bg-teal-600 text-white" : "bg-amber-50 text-amber-800 hover:bg-amber-100"
               }`}
             >
               {t}
@@ -114,21 +120,92 @@ export function LessonForm({ loading, onSubmit }: { loading: boolean; onSubmit: 
           ))}
         </div>
         <input
+          maxLength={100}
+          value={v.branch}
+          onChange={(e) => onChange({ branch: e.target.value })}
+          className={`${input} mt-3`}
+          placeholder="Chủ đề nhánh / tuần (không bắt buộc)"
+        />
+        <input
           required
           maxLength={150}
-          value={activity}
-          onChange={(e) => setActivity(e.target.value)}
+          value={v.activity}
+          onChange={(e) => onChange({ activity: e.target.value })}
           className={`${input} mt-3`}
           placeholder="Tên hoạt động, ví dụ: Phân biệt con vật nuôi trong gia đình"
         />
+      </section>
+
+      <section>
+        <Label n={4}>Thời lượng &amp; ghi chú</Label>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onChange({ duration: "" })}
+            className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
+              v.duration === "" ? "bg-teal-600 text-white" : "bg-amber-50 text-amber-800 hover:bg-amber-100"
+            }`}
+          >
+            Theo tuổi ({age?.minutes} phút)
+          </button>
+          {DURATIONS.map((d) => (
+            <button
+              type="button"
+              key={d}
+              onClick={() => onChange({ duration: d })}
+              className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
+                v.duration === d ? "bg-teal-600 text-white" : "bg-amber-50 text-amber-800 hover:bg-amber-100"
+              }`}
+            >
+              {d} phút
+            </button>
+          ))}
+        </div>
         <textarea
           rows={2}
           maxLength={500}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
+          value={v.notes}
+          onChange={(e) => onChange({ notes: e.target.value })}
           className={`${input} mt-3 resize-none`}
           placeholder="Ghi chú thêm (không bắt buộc): lớp 25 trẻ, có máy chiếu, muốn có trò chơi vận động..."
         />
+      </section>
+
+      <section className="rounded-2xl bg-amber-50/70 p-4">
+        <button
+          type="button"
+          onClick={() => setShowProfile((s) => !s)}
+          aria-expanded={showProfile}
+          className="flex w-full items-center justify-between text-left text-sm font-bold text-amber-900"
+        >
+          <span>🏫 Thông tin trường &amp; giáo viên (in trên file Word)</span>
+          <span className={`transition ${showProfile ? "rotate-180" : ""}`}>⌄</span>
+        </button>
+        {showProfile && (
+          <div className="mt-3 space-y-2.5">
+            <input
+              value={profile.school}
+              onChange={(e) => onProfileChange({ school: e.target.value })}
+              className={input}
+              placeholder="Tên trường, ví dụ: Trường mầm non Họa Mi"
+            />
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <input
+                value={profile.className}
+                onChange={(e) => onProfileChange({ className: e.target.value })}
+                className={input}
+                placeholder="Lớp, ví dụ: Mẫu giáo lớn A1"
+              />
+              <input
+                value={profile.teacher}
+                onChange={(e) => onProfileChange({ teacher: e.target.value })}
+                className={input}
+                placeholder="Giáo viên soạn bài"
+              />
+            </div>
+            <p className="text-xs text-stone-500">Lưu ngay trên máy của cô, không gửi lên máy chủ hay cho AI.</p>
+          </div>
+        )}
       </section>
 
       <div>

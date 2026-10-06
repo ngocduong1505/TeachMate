@@ -22,7 +22,7 @@ export default function Home() {
         <div className="pointer-events-none absolute -left-24 top-10 size-72 rounded-full bg-amber-200/50 blur-3xl" />
         <div className="pointer-events-none absolute -right-24 top-40 size-80 rounded-full bg-teal-200/50 blur-3xl" />
 
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 lg:grid-cols-2 lg:py-24">
+        <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 py-16 lg:grid-cols-2 lg:py-24">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-sm font-bold text-teal-700 shadow-sm ring-1 ring-teal-100">
               🌟 Dành riêng cho giáo viên mầm non
@@ -75,7 +75,7 @@ export default function Home() {
       </section>
 
       {/* Lĩnh vực */}
-      <section className="mx-auto max-w-6xl px-5 py-14">
+      <section className="mx-auto max-w-7xl px-5 sm:px-8 py-14">
         <h2 className="text-center font-display text-3xl font-extrabold text-ink">5 lĩnh vực phát triển</h2>
         <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-5">
           {DOMAINS.map((d) => {
@@ -95,7 +95,7 @@ export default function Home() {
 
       {/* Tính năng */}
       <section className="bg-white/60 py-14">
-        <div className="mx-auto grid max-w-6xl gap-6 px-5 md:grid-cols-3">
+        <div className="mx-auto grid max-w-7xl gap-6 px-5 sm:px-8 md:grid-cols-3">
           {FEATURES.map((f) => (
             <div key={f.title} className="rounded-3xl border-2 border-amber-100 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
               <div className="grid size-14 place-items-center rounded-2xl bg-amber-100 text-3xl">{f.emoji}</div>
@@ -107,7 +107,7 @@ export default function Home() {
       </section>
 
       {/* Cách dùng */}
-      <section className="mx-auto max-w-6xl px-5 py-16">
+      <section className="mx-auto max-w-7xl px-5 sm:px-8 py-16">
         <h2 className="text-center font-display text-3xl font-extrabold text-ink">Chỉ 3 bước đơn giản</h2>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {STEPS.map((s) => (

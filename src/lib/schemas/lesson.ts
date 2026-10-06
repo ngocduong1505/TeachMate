@@ -4,6 +4,8 @@ export const requestSchema = z.object({
   ageGroup: z.string().min(1),
   domain: z.string().min(1),
   theme: z.string().min(1).max(100),
+  branch: z.string().max(100).optional(), // chủ đề nhánh / tuần
+  duration: z.string().max(30).optional(), // thời lượng mong muốn, ví dụ "25 phút"
   activity: z.string().min(1).max(150),
   notes: z.string().max(500).optional(),
   fresh: z.boolean().optional(), // bỏ qua cache, tạo bản mới
@@ -28,6 +30,7 @@ export const lessonSchema = z.object({
   procedure: z.array(
     z.object({
       step: z.string().describe("Tên bước: Ổn định, Nội dung, Kết thúc..."),
+      time: z.string().describe("Thời gian của bước, ví dụ '2–3 phút'"),
       teacherActions: z.string(),
       childrenActions: z.string(),
     }),
@@ -35,3 +38,11 @@ export const lessonSchema = z.object({
   extension: z.string().describe("Hoạt động mở rộng"),
 });
 export type Lesson = z.infer<typeof lessonSchema>;
+
+/** Thông tin đầu trang/chữ ký của giáo án. Chỉ dùng ở trình duyệt, không gửi cho AI. */
+export type DocMeta = {
+  school?: string;
+  className?: string;
+  teacher?: string;
+  date?: string; // dd/mm/yyyy
+};

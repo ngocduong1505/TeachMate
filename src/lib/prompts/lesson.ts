@@ -9,16 +9,19 @@ Soạn một giáo án hoạt động bằng tiếng Việt, thực tế và áp
 
 Thông tin:
 - Độ tuổi: ${age?.label ?? req.ageGroup}
-- Thời lượng gợi ý: ${age?.minutes ?? "15–25"} phút
+- Thời lượng tiết học: ${req.duration ? req.duration : `${age?.minutes ?? "15–25"} phút`}
 - Lĩnh vực: ${domain?.label ?? req.domain}
 - Chủ đề: ${req.theme}
-- Hoạt động: ${req.activity}
+${req.branch ? `- Chủ đề nhánh / tuần: ${req.branch}
+` : ""}- Hoạt động: ${req.activity}
 ${req.notes ? `- Ghi chú của giáo viên: ${req.notes}` : ""}
 
 Yêu cầu:
 - Mục tiêu cụ thể, đo lường được, phù hợp độ tuổi.
 - Ngôn ngữ đơn giản; có câu hỏi, lời dẫn mẫu cho cô.
 - Hoạt động an toàn, không dùng vật dụng nguy hiểm.
+- Mỗi bước trong phần tiến hành phải có thời gian cụ thể (trường "time"), tổng thời gian các bước khớp với thời lượng tiết học.
+- Trong "teacherActions" và "childrenActions", mỗi ý một dòng (ngăn cách bằng ký tự xuống dòng), bắt đầu bằng "- "; lời cô nói đặt trong dấu nháy đơn; hoạt động của trẻ tương ứng từng ý của cô.
 - Phần tiến hành gồm tối thiểu: Ổn định – gây hứng thú, Nội dung (các hoạt động chính), Kết thúc.
 - Không nhắc tên hay thông tin cá nhân của trẻ.`;
 }

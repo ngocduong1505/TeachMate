@@ -4,8 +4,9 @@ import { useState } from "react";
 import type { DomainId } from "@/lib/curriculum";
 import { lessonFileName, lessonToBlob } from "@/lib/docx/lesson";
 import { lessonToText } from "@/lib/lessonText";
-import type { Lesson } from "@/lib/schemas/lesson";
+import type { DocMeta, Lesson } from "@/lib/schemas/lesson";
 import type { PartialLesson } from "@/hooks/useLessonStream";
+import { DocumentPaper } from "./DocumentPaper";
 import { DOMAIN_STYLE } from "./theme";
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
   error: string | null;
   cached: boolean;
   domain: DomainId;
+  meta: DocMeta;
   onRegenerate: () => void;
 };
 
@@ -25,7 +27,8 @@ const STEPS = [
   { key: "extension", label: "Mở rộng", emoji: "🌱" },
 ] as const;
 
-export function LessonView({ partial, lesson, loading, error, cached, domain, onRegenerate }: Props) {
+export function LessonView({ partial, lesson, loading, error, cached, domain, meta, onRegenerate }: Props) {
+  const [view, setView] = useState<"doc" | "cards">("doc");
   if (error) return <ErrorCard message={error} />;
   if (!partial) return loading ? <Thinking /> : <EmptyState />;
 
@@ -52,11 +55,35 @@ export function LessonView({ partial, lesson, loading, error, cached, domain, on
         <ProgressBar reached={reached} />
       ) : (
         lesson && (
-          <Toolbar lesson={lesson} cached={cached} onRegenerate={onRegenerate} />
+          <Toolbar lesson={lesson} meta={meta} cached={cached} onRegenerate={onRegenerate} />
         )
       )}
 
-      <div className="space-y-4 p-6">
+      <div className="no-print flex items-center gap-2 border-b border-amber-100 px-6 py-3">
+        <span className="text-sm font-bold text-stone-500">Cách xem:</span>
+        {(
+          [
+            ["doc", "📄 Văn bản chuẩn"],
+            ["cards", "🗂 Dạng thẻ"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setView(id)}
+            aria-pressed={view === id}
+            className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${
+              view === id ? "bg-teal-600 text-white" : "bg-amber-50 text-amber-800 hover:bg-amber-100"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === "doc" && <DocumentPaper partial={partial} meta={meta} />}
+
+      <div className={`space-y-4 p-6 ${view === "doc" ? "hidden" : ""}`}>
         {partial.objectives && (
           <Section emoji="🎯" title="I. Mục đích yêu cầu" tint="bg-emerald-50">
             <Group title="Kiến thức" items={partial.objectives.knowledge} dot="bg-emerald-400" />
@@ -80,7 +107,10 @@ export function LessonView({ partial, lesson, loading, error, cached, domain, on
                   <span className="absolute -left-[37px] grid size-7 place-items-center rounded-full bg-sky-500 text-sm font-extrabold text-white ring-4 ring-sky-50">
                     {i + 1}
                   </span>
-                  <h4 className="font-display text-lg font-bold text-ink">{p.step}</h4>
+                  <h4 className="font-display text-lg font-bold text-ink">
+                    {p.step}
+                    {p.time && <span className="ml-2 rounded-full bg-sky-100 px-2.5 py-0.5 align-middle text-xs font-bold text-sky-700">⏱ {p.time}</span>}
+                  </h4>
                   <div className="mt-2 grid gap-3 md:grid-cols-2">
                     {p.teacherActions && (
                       <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-sky-100">
@@ -176,14 +206,24 @@ function ProgressBar({ reached }: { reached: number }) {
   );
 }
 
-function Toolbar({ lesson, cached, onRegenerate }: { lesson: Lesson; cached: boolean; onRegenerate: () => void }) {
+function Toolbar({
+  lesson,
+  meta,
+  cached,
+  onRegenerate,
+}: {
+  lesson: Lesson;
+  meta: DocMeta;
+  cached: boolean;
+  onRegenerate: () => void;
+}) {
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   async function exportWord() {
     setExporting(true);
     try {
-      const blob = await lessonToBlob(lesson);
+      const blob = await lessonToBlob(lesson, meta);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

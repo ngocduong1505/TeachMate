@@ -10,8 +10,16 @@ const norm = (s?: string) => (s ?? "").normalize("NFC").trim().toLowerCase().rep
 
 /** Cùng đầu vào (sau khi chuẩn hóa) thì cùng khóa. `fresh` không nằm trong khóa. */
 export function cacheKey(req: LessonRequest) {
-  const raw = JSON.stringify([req.ageGroup, req.domain, norm(req.theme), norm(req.activity), norm(req.notes)]);
-  return "lesson:v1:" + createHash("sha256").update(raw).digest("hex").slice(0, 32);
+  const raw = JSON.stringify([
+    req.ageGroup,
+    req.domain,
+    norm(req.theme),
+    norm(req.branch),
+    norm(req.duration),
+    norm(req.activity),
+    norm(req.notes),
+  ]);
+  return "lesson:v2:" + createHash("sha256").update(raw).digest("hex").slice(0, 32);
 }
 
 export async function getCachedLesson(key: string): Promise<Lesson | null> {

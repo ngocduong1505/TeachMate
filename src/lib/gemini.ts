@@ -57,14 +57,23 @@ export async function generateStructuredStream(
     process.env.GEMINI_MODEL ?? "gemini-flash-latest",
     process.env.GEMINI_FALLBACK_MODEL ?? "gemini-flash-lite-latest",
   ];
+  const firstChunkMs = Number(process.env.GEMINI_FIRST_CHUNK_MS ?? 25000);
   let lastError: unknown;
   for (const model of models) {
     for (let attempt = 0; attempt < 2; attempt++) {
+      // Model quá tải có thể treo rất lâu trước khi trả chữ đầu tiên: quá hạn thì bỏ, chuyển model kế tiếp.
+      const ctrl = new AbortController();
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        ctrl.abort();
+      }, firstChunkMs);
       try {
         const stream = await ai().models.generateContentStream({
           model,
           contents: prompt,
           config: {
+            abortSignal: ctrl.signal,
             responseMimeType: "application/json",
             responseJsonSchema: z.toJSONSchema(schema),
           },
@@ -72,6 +81,7 @@ export async function generateStructuredStream(
         const it = stream[Symbol.asyncIterator]();
         let first = await it.next();
         while (!first.done && !first.value.text) first = await it.next();
+        clearTimeout(timer);
         return (async function* () {
           if (first.done) return;
           yield first.value.text!;
@@ -80,9 +90,16 @@ export async function generateStructuredStream(
           }
         })();
       } catch (e) {
+        clearTimeout(timer);
+        const status = (e as { status?: number })?.status;
+        if (timedOut) {
+          lastError = Object.assign(new Error(`Model ${model} không phản hồi kịp`), { status: 503 });
+          break; // sang model kế tiếp ngay
+        }
         lastError = e;
         if (!isRetryable(e)) throw e;
-        await sleep(1500 * (attempt + 1));
+        if (status === 404) break; // model đã bị ngừng, thử retry cũng vô ích
+        await sleep(1000 * (attempt + 1));
       }
     }
   }

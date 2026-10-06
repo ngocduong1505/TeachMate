@@ -16,7 +16,7 @@ export function Logo() {
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-amber-100 bg-cream/80 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+      <div className="mx-auto flex h-16 max-w-[1760px] items-center justify-between px-5 sm:px-8 2xl:px-12">
         <Logo />
         <nav className="flex items-center gap-2">
           <Link

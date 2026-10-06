@@ -14,6 +14,13 @@ export const requestSchema = z
     activity: z.string().max(150).optional(), // không cần với kế hoạch tuần
     notes: z.string().max(500).optional(),
     fresh: z.boolean().optional(), // bỏ qua cache, tạo bản mới
+    // Chỉnh sửa bản đã có: gửi kèm bản hiện tại và yêu cầu của cô. Kết quả không dùng cache.
+    revise: z
+      .object({
+        plan: z.record(z.string(), z.unknown()),
+        instruction: z.string().trim().min(1).max(500),
+      })
+      .optional(),
   })
   .superRefine((v, ctx) => {
     if (v.type !== "weekly" && !v.activity?.trim()) {

@@ -28,7 +28,16 @@ export async function POST(request: Request) {
   const key = cacheKey(input);
   const schema = schemaByType[input.type];
 
-  if (!input.fresh) {
+  // Chỉnh sửa: bản gửi lên phải đúng cấu trúc và không quá lớn; kết quả không đọc/ghi cache.
+  const revising = !!input.revise;
+  if (input.revise) {
+    const current = schema.safeParse(input.revise.plan);
+    if (!current.success || JSON.stringify(input.revise.plan).length > 40_000) {
+      return NextResponse.json({ error: "Giáo án cần chỉnh không hợp lệ" }, { status: 400 });
+    }
+  }
+
+  if (!input.fresh && !revising) {
     const cached = await getCachedPlan(key, input.type);
     if (cached) {
       const json = JSON.stringify(cached);
@@ -82,7 +91,7 @@ export async function POST(request: Request) {
             controller.enqueue(line({ t: "chunk", d }));
           }
           const plan = schema.parse(JSON.parse(text));
-          await setCachedPlan(key, plan);
+          if (!revising) await setCachedPlan(key, plan);
           controller.enqueue(line({ t: "done" }));
         } catch (e) {
           console.error("stream failed", e);

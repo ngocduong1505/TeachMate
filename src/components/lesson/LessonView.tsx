@@ -8,6 +8,7 @@ import type { DeepPartial, DocMeta, Lesson, Plan, PlanType } from "@/lib/schemas
 import type { PartialPlan } from "@/hooks/useLessonStream";
 import { CardsView } from "./CardsView";
 import { DocumentPaper } from "./DocumentPaper";
+import { ReviseBox } from "./ReviseBox";
 import { DOMAIN_STYLE, STEPS_BY_TYPE, TYPE_STYLE } from "./theme";
 
 type Props = {
@@ -20,9 +21,31 @@ type Props = {
   domain: DomainId;
   meta: DocMeta;
   onRegenerate: () => void;
+  onRevise: (instruction: string) => void;
+  onUndo: () => void;
+  canUndo: boolean;
+  versions: number;
+  revising: boolean;
+  reviseError: string | null;
 };
 
-export function LessonView({ partial, plan, planType, loading, error, cached, domain, meta, onRegenerate }: Props) {
+export function LessonView({
+  partial,
+  plan,
+  planType,
+  loading,
+  error,
+  cached,
+  domain,
+  meta,
+  onRegenerate,
+  onRevise,
+  onUndo,
+  canUndo,
+  versions,
+  revising,
+  reviseError,
+}: Props) {
   const [view, setView] = useState<"doc" | "cards">("doc");
   if (error) return <ErrorCard message={error} />;
   if (!partial) return loading ? <Thinking /> : <EmptyState />;
@@ -65,9 +88,21 @@ export function LessonView({ partial, plan, planType, loading, error, cached, do
       </header>
 
       {loading ? (
-        <ProgressBar steps={steps} reached={reached} />
+        <ProgressBar steps={steps} reached={reached} label={revising ? "Đang chỉnh" : "Đang viết"} />
       ) : (
         plan && <Toolbar planType={planType} plan={plan} meta={meta} cached={cached} onRegenerate={onRegenerate} />
+      )}
+
+      {plan && (
+        <ReviseBox
+          planType={planType}
+          busy={revising}
+          error={reviseError}
+          canUndo={canUndo}
+          versions={versions}
+          onSubmit={onRevise}
+          onUndo={onUndo}
+        />
       )}
 
       {canCards && (
@@ -103,10 +138,18 @@ export function LessonView({ partial, plan, planType, loading, error, cached, do
   );
 }
 
-function ProgressBar({ steps, reached }: { steps: { key: string; label: string; emoji: string }[]; reached: number }) {
+function ProgressBar({
+  steps,
+  reached,
+  label,
+}: {
+  steps: { key: string; label: string; emoji: string }[];
+  reached: number;
+  label: string;
+}) {
   return (
     <div className="no-print flex flex-wrap items-center gap-2 border-b border-amber-100 bg-amber-50/60 px-6 py-3">
-      <span className="mr-1 text-sm font-bold text-stone-600">Đang viết</span>
+      <span className="mr-1 text-sm font-bold text-stone-600">{label}</span>
       {steps.map((s, i) => {
         const done = i < reached - 1;
         const active = i === reached - 1;

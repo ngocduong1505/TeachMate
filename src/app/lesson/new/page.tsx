@@ -11,7 +11,8 @@ import { useLessonStream } from "@/hooks/useLessonStream";
 import { useProfile } from "@/hooks/useProfile";
 
 export default function NewLessonPage() {
-  const { run, regenerate, loading, error, partial, plan, planType, cached } = useLessonStream();
+  const { run, regenerate, revise, undo, canUndo, versions, revising, reviseError, loading, error, partial, plan, planType, cached } =
+    useLessonStream();
   const { profile, update: updateProfile } = useProfile();
   const [values, setValues] = useState<FormValues>(EMPTY_FORM);
   const [submitted, setSubmitted] = useState<FormValues>(EMPTY_FORM); // dữ liệu của lần soạn gần nhất
@@ -96,6 +97,12 @@ export default function NewLessonPage() {
               domain={submitted.domain}
               meta={meta}
               onRegenerate={regenerate}
+              onRevise={revise}
+              onUndo={undo}
+              canUndo={canUndo}
+              versions={versions}
+              revising={revising}
+              reviseError={reviseError}
             />
           </div>
         )}

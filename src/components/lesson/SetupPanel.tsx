@@ -248,6 +248,12 @@ export function SetupPanel({ values: v, onChange, onPickSample, profile, onProfi
                 placeholder="Tên trường, ví dụ: Trường mầm non Họa Mi"
               />
               <input
+                value={profile.group}
+                onChange={(e) => onProfileChange({ group: e.target.value })}
+                className={input}
+                placeholder="Tổ / khối, ví dụ: Tổ Mẫu giáo lớn"
+              />
+              <input
                 value={profile.className}
                 onChange={(e) => onProfileChange({ className: e.target.value })}
                 className={input}

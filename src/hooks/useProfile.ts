@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-export type Profile = { school: string; className: string; teacher: string };
+export type Profile = { school: string; group: string; className: string; teacher: string };
 const KEY = "teachmate.profile";
-const EMPTY: Profile = { school: "", className: "", teacher: "" };
+const EMPTY: Profile = { school: "", group: "", className: "", teacher: "" };
 
 /** Thông tin trường/lớp/giáo viên, lưu trong trình duyệt của cô (không gửi lên server). */
 export function useProfile() {

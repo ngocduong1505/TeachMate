@@ -1,9 +1,11 @@
 import { ageGroupById, domainById } from "@/lib/curriculum";
 import type { LessonRequest } from "@/lib/schemas/lesson";
 
-const COMMON_RULES = `- Ngôn ngữ đơn giản, thực tế, áp dụng được ngay trong lớp; có câu hỏi, lời dẫn mẫu cho cô.
+const COMMON_RULES = `- Ngôn ngữ đơn giản, thực tế, áp dụng được ngay trong lớp.
 - Hoạt động an toàn, không dùng vật dụng nguy hiểm, phù hợp độ tuổi.
-- Trong các trường văn bản dài của cô và trẻ, mỗi ý một dòng (ngăn cách bằng ký tự xuống dòng), bắt đầu bằng "- "; lời cô nói đặt trong dấu nháy đơn; hoạt động của trẻ tương ứng từng ý của cô.
+- Cách viết hoạt động theo khung kế hoạch bài dạy của Bộ GD&ĐT: KHÔNG chép nguyên văn lời nói của cô và của trẻ, mà mô tả rõ hành động cụ thể. Hoạt động của cô dùng các động từ như: tổ chức, giới thiệu, giao nhiệm vụ, gợi mở bằng câu hỏi (nêu nội dung câu hỏi ngắn gọn, không viết thành đoạn hội thoại), quan sát, theo dõi, hướng dẫn, hỗ trợ, nhận xét, khen ngợi. Hoạt động của trẻ dùng các động từ như: quan sát, lắng nghe, trả lời, thực hiện, thảo luận, chơi, thể hiện.
+- Lồng ghép việc theo dõi, đánh giá trẻ trong quá trình hoạt động (hỏi – đáp, thực hành, sản phẩm của trẻ) vào hoạt động của cô.
+- Trong các trường văn bản dài của cô và trẻ, mỗi ý một dòng (ngăn cách bằng ký tự xuống dòng), bắt đầu bằng "- "; hoạt động của trẻ tương ứng từng ý của cô.
 - Không nhắc tên hay thông tin cá nhân của trẻ.`;
 
 const STEP_RULES = `- Mỗi bước trong phần tiến hành phải có thời gian cụ thể (trường "time"), tổng thời gian các bước khớp với thời lượng.`;

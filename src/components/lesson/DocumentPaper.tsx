@@ -10,6 +10,8 @@ import type {
 } from "@/lib/schemas/lesson";
 import type { PartialPlan } from "@/hooks/useLessonStream";
 
+const DOTS = "……………………………";
+
 const Lines = ({ text }: { text?: string }) => (
   <>
     {text
@@ -319,29 +321,27 @@ export function DocumentPaper({ type, partial, meta }: { type: PlanType; partial
           weekly ? "max-w-[1180px]" : "max-w-[900px]"
         }`}
       >
-        <div className="grid grid-cols-[1fr_1.2fr] gap-6 text-[15px] font-bold">
+        <div className="grid grid-cols-2 gap-4 font-bold">
           <div>
-            <p>ĐƠN VỊ: {meta.school ? meta.school.toUpperCase() : "……………………………"}</p>
-            <p>LỚP: {meta.className || "……………………………"}</p>
+            <p>Trường: {meta.school || DOTS}</p>
+            <p>Tổ: {meta.group || DOTS}</p>
           </div>
-          <div className="text-center">
-            <p>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
-            <p className="inline-block border-b border-black pb-0.5">Độc lập - Tự do - Hạnh phúc</p>
-          </div>
+          <p>Họ và tên giáo viên: {meta.teacher || DOTS}</p>
         </div>
 
         <h2 className="mt-8 text-center text-2xl font-bold">{info?.doc}</h2>
-        <p className="mt-1 mb-5 text-center font-bold">
-          {weekly ? "TÊN KẾ HOẠCH" : "ĐỀ TÀI"}: {p.title?.toUpperCase()}
+        <p className="mt-1 text-center font-bold">
+          {weekly ? "TÊN KẾ HOẠCH" : "TÊN BÀI DẠY"}: {p.title?.toUpperCase()}
         </p>
+        <p className="text-center">
+          {weekly ? "Lớp" : `Lĩnh vực/Hoạt động giáo dục: ${p.domain ?? "..."}; lớp`}: {meta.className || DOTS}
+        </p>
+        {!weekly && p.duration && <p className="text-center">Thời gian thực hiện: {p.duration}</p>}
 
-        <div className="mb-3">
-          {!weekly && p.domain && <p>Lĩnh vực: {p.domain}</p>}
+        <div className="mt-4 mb-3">
           {p.theme && <p>Chủ đề: {p.theme}</p>}
           {weekly && p.branch && <p>Chủ đề nhánh: {p.branch}</p>}
           {p.ageGroup && <p>Độ tuổi: {p.ageGroup}</p>}
-          {!weekly && p.duration && <p>Thời gian: {p.duration}</p>}
-          {meta.teacher && <p>Người thực hiện: {meta.teacher}</p>}
           {meta.date && <p>Ngày soạn: {meta.date}</p>}
         </div>
 

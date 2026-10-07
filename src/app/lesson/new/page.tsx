@@ -11,13 +11,15 @@ import { AGE_GROUPS } from "@/lib/curriculum";
 import type { DocMeta } from "@/lib/schemas/lesson";
 import { useLessonStream } from "@/hooks/useLessonStream";
 import { useProfile } from "@/hooks/useProfile";
+import { useExportTemplate } from "@/hooks/useExportTemplate";
 import { getPlan, savePlan, updatePlan } from "@/lib/library";
 import { profileToClassInfo } from "@/lib/profiles";
 
 export default function NewLessonPage() {
-  const { run, regenerate, revise, undo, load, demo, canUndo, versions, revising, reviseError, loading, error, partial, plan, planType, cached } =
+  const { run, regenerate, revise, adapt, origin, undo, load, demo, canUndo, versions, revising, reviseError, loading, error, partial, plan, planType, cached } =
     useLessonStream();
   const profileState = useProfile();
+  const { template, update: updateTemplate } = useExportTemplate();
   const { profile, update: updateProfile } = profileState;
   const [values, setValues] = useState<FormValues>(EMPTY_FORM);
   const [submitted, setSubmitted] = useState<FormValues>(EMPTY_FORM); // dữ liệu của lần soạn gần nhất
@@ -31,6 +33,8 @@ export default function NewLessonPage() {
   // Các thao tác lưu chạy lần lượt để không tạo trùng bản.
   const savedId = useRef<string | null>(null);
   const savedPlan = useRef<unknown>(null);
+  const lastOrigin = useRef(0);
+  const pendingAdapt = useRef<FormValues | null>(null);
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   useEffect(() => {
     if (!plan) {
@@ -40,7 +44,18 @@ export default function NewLessonPage() {
     }
     if (demo || plan === savedPlan.current) return;
     savedPlan.current = plan;
-    const entry = { type: planType, title: plan.title, form: submitted, request: toRequest(submitted), plan };
+    // Chuyển sang độ tuổi khác: lưu thành bản mới với thông tin của lớp mới
+    let form = submitted;
+    if (origin !== lastOrigin.current) {
+      lastOrigin.current = origin;
+      savedId.current = null;
+      if (pendingAdapt.current) {
+        form = pendingAdapt.current;
+        pendingAdapt.current = null;
+        setSubmitted(form);
+      }
+    }
+    const entry = { type: planType, title: plan.title, form, request: toRequest(form), plan };
     saveQueue.current = saveQueue.current
       .then(async () => {
         if (savedId.current && (await updatePlan(savedId.current, { plan, title: plan.title }))) return;
@@ -48,7 +63,7 @@ export default function NewLessonPage() {
       })
       .catch((e) => console.error("save plan failed", e));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan, demo]);
+  }, [plan, demo, origin]);
 
   // Mở giáo án đã lưu từ thư viện: /lesson/new?open=<id>
   useEffect(() => {
@@ -102,6 +117,17 @@ export default function NewLessonPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  /** Chuyển giáo án đang xem sang độ tuổi khác (AI điều chỉnh, lưu thành bản mới). */
+  function onAdapt(ageGroup: FormValues["ageGroup"]) {
+    const next = { ...submitted, ageGroup, duration: "" };
+    const age = AGE_GROUPS.find((a) => a.id === ageGroup);
+    pendingAdapt.current = next;
+    adapt(
+      toRequest(next),
+      `Chuyển giáo án này sang ${age?.label}. Giữ nguyên chủ đề và hoạt động chính; điều chỉnh mục tiêu, mức độ khó, thời lượng (${age?.minutes} phút), đồ dùng, cách tổ chức và ngôn ngữ cho phù hợp độ tuổi mới. Cập nhật trường ageGroup và duration.`,
+    );
+  }
+
   function edit() {
     setEditing(true);
     requestAnimationFrame(() => document.getElementById("setup")?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -119,6 +145,7 @@ export default function NewLessonPage() {
     className: profile.className ? `${profile.className} (${ageLabel.match(/\((.*)\)/)?.[1] ?? ""})` : ageLabel,
     teacher: profile.teacher,
     date: today,
+    template,
   };
   const hasResult = !!partial || loading || !!error;
 
@@ -163,6 +190,9 @@ export default function NewLessonPage() {
               domain={submitted.domain}
               meta={meta}
               onRegenerate={regenerate}
+              ageGroup={submitted.ageGroup}
+              onAdapt={onAdapt}
+              onTemplateChange={updateTemplate}
               onRevise={revise}
               onUndo={undo}
               canUndo={canUndo}

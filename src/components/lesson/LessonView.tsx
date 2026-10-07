@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { planTypeById, type DomainId } from "@/lib/curriculum";
+import { AGE_GROUPS, planTypeById, type AgeGroupId, type DomainId } from "@/lib/curriculum";
+import { DEFAULT_TEMPLATE, type ExportTemplate } from "@/lib/exportTemplate";
 import { planFileName, planToBlob } from "@/lib/docx/lesson";
 import { planToText } from "@/lib/lessonText";
 import type { DeepPartial, DocMeta, Lesson, Plan, PlanType } from "@/lib/schemas/lesson";
@@ -9,6 +10,7 @@ import type { PartialPlan } from "@/hooks/useLessonStream";
 import { CardsView } from "./CardsView";
 import { DocumentPaper } from "./DocumentPaper";
 import { ReviseBox } from "./ReviseBox";
+import { TemplateDialog } from "./TemplateDialog";
 import { DOMAIN_STYLE, STEPS_BY_TYPE, TYPE_STYLE } from "./theme";
 
 type Props = {
@@ -22,6 +24,9 @@ type Props = {
   domain: DomainId;
   meta: DocMeta;
   onRegenerate: () => void;
+  ageGroup: AgeGroupId;
+  onAdapt: (ageGroup: AgeGroupId) => void;
+  onTemplateChange: (patch: Partial<ExportTemplate>) => void;
   onRevise: (instruction: string) => void;
   onUndo: () => void;
   canUndo: boolean;
@@ -41,6 +46,9 @@ export function LessonView({
   domain,
   meta,
   onRegenerate,
+  ageGroup,
+  onAdapt,
+  onTemplateChange,
   onRevise,
   onUndo,
   canUndo,
@@ -92,7 +100,19 @@ export function LessonView({
       {loading ? (
         <ProgressBar steps={steps} reached={reached} label={revising ? "Đang chỉnh" : "Đang viết"} />
       ) : (
-        plan && <Toolbar planType={planType} plan={plan} meta={meta} cached={cached} demo={demo} onRegenerate={onRegenerate} />
+        plan && (
+          <Toolbar
+            planType={planType}
+            plan={plan}
+            meta={meta}
+            cached={cached}
+            demo={demo}
+            onRegenerate={onRegenerate}
+            ageGroup={ageGroup}
+            onAdapt={onAdapt}
+            onTemplateChange={onTemplateChange}
+          />
+        )
       )}
 
       {plan && (
@@ -181,6 +201,9 @@ function Toolbar({
   cached,
   demo,
   onRegenerate,
+  ageGroup,
+  onAdapt,
+  onTemplateChange,
 }: {
   planType: PlanType;
   plan: Plan;
@@ -188,9 +211,23 @@ function Toolbar({
   cached: boolean;
   demo: boolean;
   onRegenerate: () => void;
+  ageGroup: AgeGroupId;
+  onAdapt: (ageGroup: AgeGroupId) => void;
+  onTemplateChange: (patch: Partial<ExportTemplate>) => void;
 }) {
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const [adaptTo, setAdaptTo] = useState<AgeGroupId | "">("");
+
+  /** Lưu PDF: dùng hộp thoại in của trình duyệt (chọn “Lưu dưới dạng PDF”), đặt tên file theo giáo án. */
+  function savePdf() {
+    const prev = document.title;
+    document.title = planFileName(planType, plan).replace(/\.docx$/, "");
+    window.addEventListener("afterprint", () => (document.title = prev), { once: true });
+    track("print");
+    window.print();
+  }
 
   const track = (action: "download_word" | "copy" | "print") => {
     if (demo) return;
@@ -246,18 +283,55 @@ function Toolbar({
         <button onClick={copy} className={`${btn} bg-white text-stone-700 ring-1 ring-amber-200 hover:bg-amber-50`}>
           {copied ? "✓ Đã sao chép" : "📋 Sao chép"}
         </button>
-        <button onClick={() => {
-          track("print");
-          window.print();
-        }} className={`${btn} bg-white text-stone-700 ring-1 ring-amber-200 hover:bg-amber-50`}>
+        <button onClick={savePdf} className={`${btn} bg-white text-stone-700 ring-1 ring-amber-200 hover:bg-amber-50`} title="Mở hộp thoại in, chọn “Lưu dưới dạng PDF”">
+          📑 Lưu PDF
+        </button>
+        <button
+          onClick={() => {
+            track("print");
+            window.print();
+          }}
+          className={`${btn} bg-white text-stone-700 ring-1 ring-amber-200 hover:bg-amber-50`}
+        >
           🖨 In
         </button>
+        <button onClick={() => setTemplateOpen(true)} className={`${btn} bg-white text-stone-700 ring-1 ring-amber-200 hover:bg-amber-50`}>
+          ⚙ Mẫu xuất
+        </button>
+        {!demo && (
+          <span className="flex items-center gap-1.5">
+            <select
+              value={adaptTo}
+              onChange={(e) => setAdaptTo(e.target.value as AgeGroupId | "")}
+              className="rounded-full border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-stone-700"
+              aria-label="Chuyển sang độ tuổi khác"
+            >
+              <option value="">🔀 Chuyển sang lớp…</option>
+              {AGE_GROUPS.filter((a) => a.id !== ageGroup).map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+            <button
+              disabled={!adaptTo}
+              onClick={() => {
+                if (adaptTo) onAdapt(adaptTo);
+                setAdaptTo("");
+              }}
+              className={`${btn} bg-white text-teal-700 ring-1 ring-teal-200 hover:bg-teal-50`}
+            >
+              Chuyển
+            </button>
+          </span>
+        )}
         {(cached || demo) && (
           <button onClick={onRegenerate} className={`${btn} ml-auto bg-white text-orange-700 ring-1 ring-orange-200 hover:bg-orange-50`}>
             {demo ? "✨ Soạn bản AI với thông tin này" : "🔄 Tạo bản khác"}
           </button>
         )}
       </div>
+      {templateOpen && <TemplateDialog template={meta.template ?? DEFAULT_TEMPLATE} onChange={onTemplateChange} onClose={() => setTemplateOpen(false)} />}
       {demo && (
         <p className="mt-2 text-xs text-stone-500">
           Đây là giáo án mẫu có sẵn, không dùng AI. Cô vẫn có thể chỉnh sửa, tải Word, sao chép hoặc in như bình thường.

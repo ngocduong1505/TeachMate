@@ -6,6 +6,7 @@ const COMMON_RULES = `- Ngôn ngữ đơn giản, thực tế, áp dụng đư�
 - Cách viết hoạt động theo khung kế hoạch bài dạy của Bộ GD&ĐT: KHÔNG chép nguyên văn lời nói của cô và của trẻ, mà mô tả rõ hành động cụ thể. Hoạt động của cô dùng các động từ như: tổ chức, giới thiệu, giao nhiệm vụ, gợi mở bằng câu hỏi (nêu nội dung câu hỏi ngắn gọn, không viết thành đoạn hội thoại), quan sát, theo dõi, hướng dẫn, hỗ trợ, nhận xét, khen ngợi. Hoạt động của trẻ dùng các động từ như: quan sát, lắng nghe, trả lời, thực hiện, thảo luận, chơi, thể hiện.
 - Lồng ghép việc theo dõi, đánh giá trẻ trong quá trình hoạt động (hỏi – đáp, thực hành, sản phẩm của trẻ) vào hoạt động của cô.
 - Trong các trường văn bản dài của cô và trẻ, mỗi ý một dòng (ngăn cách bằng ký tự xuống dòng), bắt đầu bằng "- "; hoạt động của trẻ tương ứng từng ý của cô.
+- Mục tiêu bám Chương trình giáo dục mầm non hiện hành: viết theo hướng "kết quả mong đợi" của độ tuổi và lĩnh vực đã chọn, mỗi mục tiêu là một hành vi quan sát được của trẻ (trẻ biết, trẻ thực hiện được, trẻ thể hiện...), mức độ đúng độ tuổi, không đòi hỏi vượt tuổi và không lặp lại giữa kiến thức, kỹ năng, thái độ. Không tự đặt mã chỉ số hay số hiệu văn bản trong mục tiêu.
 - Không nhắc tên hay thông tin cá nhân của trẻ.`;
 
 const STEP_RULES = `- Mỗi bước trong phần tiến hành phải có thời gian cụ thể (trường "time"), tổng thời gian các bước khớp với thời lượng.`;

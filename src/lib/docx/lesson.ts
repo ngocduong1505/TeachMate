@@ -2,6 +2,7 @@ import {
   AlignmentType,
   BorderStyle,
   Document,
+  ImageRun,
   Packer,
   PageOrientation,
   Paragraph,
@@ -13,17 +14,19 @@ import {
   WidthType,
 } from "docx";
 import { planTypeById } from "@/lib/curriculum";
+import { DEFAULT_TEMPLATE } from "@/lib/exportTemplate";
 import type { CornerPlan, DocMeta, Lesson, OutdoorPlan, Plan, PlanType, WeeklyPlan } from "@/lib/schemas/lesson";
 
 const FONT = "Times New Roman";
 const SIZE = 26; // 13pt
+let baseSize = SIZE; // cỡ chữ nội dung, đặt lại cho mỗi tài liệu theo mẫu xuất
 
 type Align = (typeof AlignmentType)[keyof typeof AlignmentType];
 type RunOpts = { bold?: boolean; italics?: boolean; size?: number };
 type Block = Paragraph | Table;
 
 const run = (text: string, o: RunOpts = {}) =>
-  new TextRun({ text, font: FONT, size: o.size ?? SIZE, bold: o.bold, italics: o.italics });
+  new TextRun({ text, font: FONT, size: o.size ?? baseSize, bold: o.bold, italics: o.italics });
 
 const para = (text: string, o: RunOpts & { align?: Align; after?: number } = {}) =>
   new Paragraph({ alignment: o.align, children: [run(text, o)], spacing: { after: o.after ?? 80 } });
@@ -80,10 +83,33 @@ function headerBlock(meta: DocMeta) {
   });
 }
 
+/** Logo và dòng cơ quan chủ quản (nếu có) phía trên đầu trang. */
+function topBlocks(meta: DocMeta): Block[] {
+  const t = meta.template;
+  const out: Block[] = [];
+  if (t?.logo) {
+    const b64 = t.logo.dataUrl.split(",")[1] ?? "";
+    out.push(
+      new Paragraph({
+        spacing: { after: 60 },
+        children: [
+          new ImageRun({
+            type: "png",
+            data: Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)),
+            transformation: { width: t.logo.width, height: t.logo.height },
+          }),
+        ],
+      }),
+    );
+  }
+  if (t?.orgLine.trim()) out.push(para(t.orgLine.trim().toUpperCase(), { bold: true, after: 80 }));
+  return out;
+}
+
 function signatureBlock(meta: DocMeta) {
   const centered = (text: string, o: RunOpts = {}) => para(text, { ...o, align: AlignmentType.CENTER });
   const left = [
-    centered("NGƯỜI DUYỆT GIÁO ÁN", { bold: true }),
+    centered(meta.template?.approverTitle?.trim() || DEFAULT_TEMPLATE.approverTitle, { bold: true }),
     centered("(Tổ trưởng chuyên môn / Ban Giám Hiệu)", { italics: true }),
   ];
   const right = [
@@ -244,6 +270,7 @@ export function planToDocument(type: PlanType, plan: Plan, meta: DocMeta = {}) {
   const info = planTypeById(type);
   const p = plan as Lesson & WeeklyPlan;
   const landscape = type === "weekly";
+  baseSize = (meta.template?.fontSize ?? DEFAULT_TEMPLATE.fontSize) * 2;
   return new Document({
     creator: "TeachMate",
     title: p.title,
@@ -256,6 +283,7 @@ export function planToDocument(type: PlanType, plan: Plan, meta: DocMeta = {}) {
           },
         },
         children: [
+          ...topBlocks(meta),
           headerBlock(meta),
           para(" ", { after: 80 }),
           para(info?.doc ?? "KẾ HOẠCH", { bold: true, size: 32, align: AlignmentType.CENTER, after: 60 }),
@@ -278,8 +306,7 @@ export function planToDocument(type: PlanType, plan: Plan, meta: DocMeta = {}) {
             ["Ngày soạn", meta.date],
           ]),
           ...typeBody(type, plan),
-          para(" ", { after: 120 }),
-          signatureBlock(meta),
+          ...(meta.template?.showSignature === false ? [] : [para(" ", { after: 120 }), signatureBlock(meta)]),
         ],
       },
     ],

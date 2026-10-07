@@ -1,3 +1,4 @@
+import type { ExportTemplate } from "@/lib/exportTemplate";
 import { z } from "zod";
 
 export const PLAN_TYPES = ["lesson", "corner", "outdoor", "weekly"] as const;
@@ -154,4 +155,5 @@ export type DocMeta = {
   className?: string;
   teacher?: string;
   date?: string; // dd/mm/yyyy
+  template?: ExportTemplate; // mẫu xuất theo trường
 };

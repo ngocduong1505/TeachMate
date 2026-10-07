@@ -9,6 +9,7 @@ import type {
   WeeklyPlan,
 } from "@/lib/schemas/lesson";
 import type { PartialPlan } from "@/hooks/useLessonStream";
+import { DEFAULT_TEMPLATE } from "@/lib/exportTemplate";
 
 const DOTS = "……………………………";
 
@@ -123,7 +124,7 @@ function Signature({ meta }: { meta: DocMeta }) {
   return (
     <div className="mt-8 grid grid-cols-2 gap-6 text-center">
       <div>
-        <p className="font-bold">NGƯỜI DUYỆT GIÁO ÁN</p>
+        <p className="font-bold">{meta.template?.approverTitle?.trim() || DEFAULT_TEMPLATE.approverTitle}</p>
         <p className="italic">(Tổ trưởng chuyên môn / Ban Giám Hiệu)</p>
       </div>
       <div>
@@ -317,10 +318,18 @@ export function DocumentPaper({ type, partial, meta }: { type: PlanType; partial
   return (
     <div className="overflow-x-auto bg-stone-100/70 p-3 sm:p-6 print:bg-white print:p-0">
       <div
-        className={`mx-auto min-w-[640px] bg-white px-6 py-8 font-[family-name:Times_New_Roman,Times,serif] text-[16px] leading-relaxed text-black shadow-md ring-1 ring-black/5 sm:px-12 sm:py-12 print:shadow-none print:ring-0 ${
+        className={`mx-auto min-w-[640px] bg-white px-6 py-8 font-[family-name:Times_New_Roman,Times,serif] leading-relaxed text-black shadow-md ring-1 ring-black/5 sm:px-12 sm:py-12 print:shadow-none print:ring-0 ${
           weekly ? "max-w-[1180px]" : "max-w-[900px]"
         }`}
+        style={{ fontSize: `${((meta.template?.fontSize ?? 13) / 13) * 16}px` }}
       >
+        {/* Khổ giấy khi in / lưu PDF: kế hoạch tuần nằm ngang */}
+        <style>{`@media print { @page { size: A4 ${weekly ? "landscape" : "portrait"}; margin: 15mm; } }`}</style>
+        {meta.template?.logo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={meta.template.logo.dataUrl} alt="" style={{ width: meta.template.logo.width, height: meta.template.logo.height }} className="mb-2" />
+        )}
+        {meta.template?.orgLine.trim() && <p className="mb-2 font-bold uppercase">{meta.template.orgLine.trim()}</p>}
         <div className="grid grid-cols-2 gap-4 font-bold">
           <div>
             <p>Trường: {meta.school || DOTS}</p>
@@ -350,7 +359,7 @@ export function DocumentPaper({ type, partial, meta }: { type: PlanType; partial
         {type === "outdoor" && <OutdoorBody p={partial as DeepPartial<OutdoorPlan>} />}
         {type === "weekly" && <WeeklyBody p={partial as DeepPartial<WeeklyPlan>} />}
 
-        {(p.extension || p.notes) && <Signature meta={meta} />}
+        {(p.extension || p.notes) && meta.template?.showSignature !== false && <Signature meta={meta} />}
       </div>
     </div>
   );

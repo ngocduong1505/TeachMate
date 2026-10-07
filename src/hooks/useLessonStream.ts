@@ -25,13 +25,14 @@ export function useLessonStream() {
   const [history, setHistory] = useState<Plan[]>([]); // các bản trước đó, mới nhất ở cuối
   const [planType, setPlanType] = useState<PlanType>("lesson");
   const [cached, setCached] = useState(false);
+  const [origin, setOrigin] = useState(0); // tăng mỗi khi chuyển sang độ tuổi khác (tạo giáo án mới từ bản đang xem)
   const [demo, setDemo] = useState(false); // đang xem giáo án mẫu có sẵn (không qua AI)
   const abortRef = useRef<AbortController | null>(null);
   const lastInput = useRef<LessonRequest | null>(null);
   const planRef = useRef<Plan | null>(null); // bản hiện tại, dùng trong callback
   planRef.current = plan;
 
-  const execute = useCallback(async (input: LessonRequest, fresh: boolean, instruction?: string) => {
+  const execute = useCallback(async (input: LessonRequest, fresh: boolean, instruction?: string, adapting = false) => {
     const current = planRef.current;
     const isRevise = !!instruction && !!current;
     abortRef.current?.abort();
@@ -93,7 +94,13 @@ export function useLessonStream() {
           } else if (ev.t === "done") {
             const result = schemaByType[input.type].safeParse(JSON.parse(json));
             if (!result.success) throw new Error("Giáo án tạo ra không hợp lệ, vui lòng thử lại.");
-            if (isRevise && current) setHistory((h) => [...h, current].slice(-MAX_HISTORY));
+            if (adapting) {
+              lastInput.current = input;
+              setHistory([]);
+              setOrigin((n) => n + 1);
+            } else if (isRevise && current) {
+              setHistory((h) => [...h, current].slice(-MAX_HISTORY));
+            }
             setPlan(result.data as Plan);
             setPartial(result.data as PartialPlan);
             finished = true;
@@ -149,6 +156,14 @@ export function useLessonStream() {
     [execute],
   );
 
+  /** Chuyển bản đang xem sang độ tuổi khác: tạo giáo án mới (không phải bản chỉnh sửa) dựa trên bản hiện tại. */
+  const adapt = useCallback(
+    (input: LessonRequest, instruction: string) => {
+      if (planRef.current) void execute(input, true, instruction, true);
+    },
+    [execute],
+  );
+
   /** Quay lại bản trước đó. */
   const undo = useCallback(() => {
     setHistory((h) => {
@@ -165,6 +180,8 @@ export function useLessonStream() {
     run,
     regenerate,
     revise,
+    adapt,
+    origin,
     undo,
     load,
     demo,

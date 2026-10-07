@@ -4,14 +4,17 @@ import { useEffect, useState } from "react";
 import { LessonView } from "@/components/lesson/LessonView";
 import { SetupPanel } from "@/components/lesson/SetupPanel";
 import { SummaryBar } from "@/components/lesson/SummaryBar";
-import { EMPTY_FORM, TYPE_HINTS, type FormValues } from "@/components/lesson/samples";
+import { DEMO_FORM, EMPTY_FORM, TYPE_HINTS, type FormValues } from "@/components/lesson/samples";
+import { SAMPLE_PLANS } from "@/lib/samples/plans";
+import type { LessonRequest } from "@/lib/schemas/lesson";
 import { AGE_GROUPS } from "@/lib/curriculum";
 import type { DocMeta } from "@/lib/schemas/lesson";
 import { useLessonStream } from "@/hooks/useLessonStream";
 import { useProfile } from "@/hooks/useProfile";
 
 export default function NewLessonPage() {
-  const { run, regenerate, loading, error, partial, plan, planType, cached } = useLessonStream();
+  const { run, regenerate, revise, undo, load, demo, canUndo, versions, revising, reviseError, loading, error, partial, plan, planType, cached } =
+    useLessonStream();
   const { profile, update: updateProfile } = useProfile();
   const [values, setValues] = useState<FormValues>(EMPTY_FORM);
   const [submitted, setSubmitted] = useState<FormValues>(EMPTY_FORM); // dữ liệu của lần soạn gần nhất
@@ -23,20 +26,34 @@ export default function NewLessonPage() {
 
   const patch = (p: Partial<FormValues>) => setValues((v) => ({ ...v, ...p }));
 
+  function toRequest(v: FormValues): LessonRequest {
+    const hint = TYPE_HINTS[v.type];
+    return {
+      type: v.type,
+      ageGroup: v.ageGroup,
+      domain: hint.needsDomain ? v.domain : undefined,
+      theme: v.theme.trim(),
+      branch: v.branch.trim() || undefined,
+      activity: hint.needsActivity ? v.activity.trim() : undefined,
+      duration: hint.needsDuration && v.duration ? `${v.duration} phút` : undefined,
+      notes: v.notes.trim() || undefined,
+    };
+  }
+
   function onSubmit() {
-    const hint = TYPE_HINTS[values.type];
     setSubmitted(values);
     setEditing(false);
-    void run({
-      type: values.type,
-      ageGroup: values.ageGroup,
-      domain: hint.needsDomain ? values.domain : undefined,
-      theme: values.theme.trim(),
-      branch: values.branch.trim() || undefined,
-      activity: hint.needsActivity ? values.activity.trim() : undefined,
-      duration: hint.needsDuration && values.duration ? `${values.duration} phút` : undefined,
-      notes: values.notes.trim() || undefined,
-    });
+    void run(toRequest(values));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  /** Xem ngay giáo án mẫu của loại đang chọn (không gọi AI). */
+  function onDemo() {
+    const form = DEMO_FORM[values.type];
+    setValues(form);
+    setSubmitted(form);
+    setEditing(false);
+    load(toRequest(form), SAMPLE_PLANS[form.type]);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -77,6 +94,7 @@ export default function NewLessonPage() {
             values={values}
             onChange={patch}
             onPickSample={setValues}
+            onDemo={onDemo}
             profile={profile}
             onProfileChange={updateProfile}
             loading={loading}
@@ -93,9 +111,16 @@ export default function NewLessonPage() {
               loading={loading}
               error={error}
               cached={cached}
+              demo={demo}
               domain={submitted.domain}
               meta={meta}
               onRegenerate={regenerate}
+              onRevise={revise}
+              onUndo={undo}
+              canUndo={canUndo}
+              versions={versions}
+              revising={revising}
+              reviseError={reviseError}
             />
           </div>
         )}

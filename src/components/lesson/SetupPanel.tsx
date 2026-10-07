@@ -31,13 +31,14 @@ type Props = {
   values: FormValues;
   onChange: (patch: Partial<FormValues>) => void;
   onPickSample: (v: FormValues) => void;
+  onDemo: () => void;
   profile: Profile;
   onProfileChange: (patch: Partial<Profile>) => void;
   loading: boolean;
   onSubmit: () => void;
 };
 
-export function SetupPanel({ values: v, onChange, onPickSample, profile, onProfileChange, loading, onSubmit }: Props) {
+export function SetupPanel({ values: v, onChange, onPickSample, onDemo, profile, onProfileChange, loading, onSubmit }: Props) {
   const hint = TYPE_HINTS[v.type];
   const age = AGE_GROUPS.find((a) => a.id === v.ageGroup);
   const samples = SAMPLES[v.type];
@@ -86,6 +87,13 @@ export function SetupPanel({ values: v, onChange, onPickSample, profile, onProfi
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={onDemo}
+            className="rounded-full bg-amber-400 px-4 py-1.5 text-sm font-bold text-amber-950 shadow-sm transition hover:-translate-y-0.5 hover:bg-amber-300"
+          >
+            ⚡ Xem giáo án mẫu ngay
+          </button>
           <span className="text-sm font-bold text-stone-500">💡 Gợi ý nhanh:</span>
           {samples.map((s) => (
             <button

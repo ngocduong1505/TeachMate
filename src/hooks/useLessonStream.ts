@@ -12,33 +12,53 @@ type StreamEvent =
   | { t: "done" }
   | { t: "error"; m?: string };
 
-/** Gọi /api/generate và đọc luồng NDJSON, cập nhật giáo án dần dần. */
+const MAX_HISTORY = 10;
+
+/** Gọi /api/generate và đọc luồng NDJSON, cập nhật giáo án dần dần. Hỗ trợ chỉnh sửa bản đã có và hoàn tác. */
 export function useLessonStream() {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [revising, setRevising] = useState(false);
+  const [error, setError] = useState<string | null>(null); // lỗi khi soạn mới
+  const [reviseError, setReviseError] = useState<string | null>(null); // lỗi khi chỉnh sửa (giữ nguyên bản đang xem)
   const [partial, setPartial] = useState<PartialPlan | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null); // chỉ có khi stream hoàn tất và hợp lệ
+  const [history, setHistory] = useState<Plan[]>([]); // các bản trước đó, mới nhất ở cuối
   const [planType, setPlanType] = useState<PlanType>("lesson");
   const [cached, setCached] = useState(false);
+  const [demo, setDemo] = useState(false); // đang xem giáo án mẫu có sẵn (không qua AI)
   const abortRef = useRef<AbortController | null>(null);
   const lastInput = useRef<LessonRequest | null>(null);
+  const planRef = useRef<Plan | null>(null); // bản hiện tại, dùng trong callback
+  planRef.current = plan;
 
-  const run = useCallback(async (input: LessonRequest, fresh = false) => {
-    lastInput.current = input;
-    setPlanType(input.type);
+  const execute = useCallback(async (input: LessonRequest, fresh: boolean, instruction?: string) => {
+    const current = planRef.current;
+    const isRevise = !!instruction && !!current;
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     setLoading(true);
+    setReviseError(null);
     setError(null);
-    setPlan(null);
-    setPartial(null);
-    setCached(false);
+    if (isRevise) {
+      setRevising(true); // giữ nguyên bản đang xem cho tới khi có chữ mới
+    } else {
+      lastInput.current = input;
+      setDemo(false);
+      setPlanType(input.type);
+      setPlan(null);
+      setPartial(null);
+      setHistory([]);
+      setCached(false);
+    }
     try {
+      const body = isRevise
+        ? { ...input, fresh: true, revise: { plan: current, instruction } }
+        : { ...input, fresh };
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...input, fresh }),
+        body: JSON.stringify(body),
         signal: ctrl.signal,
       });
       if (!res.ok || !res.body) {
@@ -73,6 +93,7 @@ export function useLessonStream() {
           } else if (ev.t === "done") {
             const result = schemaByType[input.type].safeParse(JSON.parse(json));
             if (!result.success) throw new Error("Giáo án tạo ra không hợp lệ, vui lòng thử lại.");
+            if (isRevise && current) setHistory((h) => [...h, current].slice(-MAX_HISTORY));
             setPlan(result.data as Plan);
             setPartial(result.data as PartialPlan);
             finished = true;
@@ -82,15 +103,80 @@ export function useLessonStream() {
       if (!finished) throw new Error("Kết nối bị gián đoạn, vui lòng thử lại.");
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
-      setError(err instanceof Error ? err.message : "Có lỗi xảy ra");
+      const message = err instanceof Error ? err.message : "Có lỗi xảy ra";
+      if (isRevise) {
+        // Chỉnh sửa lỗi: quay về bản đang có, báo lỗi ngay tại ô chỉnh sửa
+        setPartial(current as PartialPlan);
+        setReviseError(message);
+      } else {
+        setError(message);
+      }
     } finally {
-      if (abortRef.current === ctrl) setLoading(false);
+      if (abortRef.current === ctrl) {
+        setLoading(false);
+        setRevising(false);
+      }
     }
   }, []);
 
-  const regenerate = useCallback(() => {
-    if (lastInput.current) void run(lastInput.current, true);
-  }, [run]);
+  const run = useCallback((input: LessonRequest, fresh = false) => execute(input, fresh), [execute]);
 
-  return { run, regenerate, loading, error, partial, plan, planType, cached };
+  const regenerate = useCallback(() => {
+    if (lastInput.current) void execute(lastInput.current, true);
+  }, [execute]);
+
+  /** Nạp ngay một giáo án có sẵn (không gọi AI); vẫn chỉnh sửa, xuất file... như bản vừa soạn. */
+  const load = useCallback((input: LessonRequest, sample: Plan) => {
+    abortRef.current?.abort();
+    lastInput.current = input;
+    setPlanType(input.type);
+    setLoading(false);
+    setRevising(false);
+    setError(null);
+    setReviseError(null);
+    setCached(false);
+    setDemo(true);
+    setHistory([]);
+    setPlan(sample);
+    setPartial(sample as PartialPlan);
+  }, []);
+
+  /** Chỉnh bản đang xem theo yêu cầu của cô. */
+  const revise = useCallback(
+    (instruction: string) => {
+      if (lastInput.current && planRef.current) void execute(lastInput.current, true, instruction);
+    },
+    [execute],
+  );
+
+  /** Quay lại bản trước đó. */
+  const undo = useCallback(() => {
+    setHistory((h) => {
+      const prev = h[h.length - 1];
+      if (!prev) return h;
+      setPlan(prev);
+      setPartial(prev as PartialPlan);
+      setReviseError(null);
+      return h.slice(0, -1);
+    });
+  }, []);
+
+  return {
+    run,
+    regenerate,
+    revise,
+    undo,
+    load,
+    demo,
+    canUndo: history.length > 0,
+    versions: history.length + 1,
+    loading,
+    revising,
+    error,
+    reviseError,
+    partial,
+    plan,
+    planType,
+    cached,
+  };
 }

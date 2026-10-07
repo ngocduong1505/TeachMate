@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthNav } from "@/components/AuthNav";
 
 export function Logo() {
   return (
@@ -22,6 +23,7 @@ export function SiteHeader() {
           <Link href="/library" className="rounded-full px-4 py-2 text-sm font-bold text-stone-600 transition hover:bg-amber-100">
             📚 Thư viện
           </Link>
+          <AuthNav />
           <Link
             href="/lesson/new"
             className="rounded-full bg-teal-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-teal-200 transition hover:-translate-y-0.5 hover:bg-teal-700"

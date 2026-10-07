@@ -5,13 +5,15 @@ import { useMemo, useState } from "react";
 import { AGE_GROUPS, PLAN_TYPE_INFO } from "@/lib/curriculum";
 import { removePlan, updatePlan } from "@/lib/library";
 import { TYPE_STYLE } from "@/components/lesson/theme";
+import { useAuth } from "@/components/AuthProvider";
 import { useLibrary } from "@/hooks/useLibrary";
 import type { PlanType } from "@/lib/schemas/lesson";
 
 const dateFmt = new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" });
 
 export default function LibraryPage() {
-  const { items, ready } = useLibrary();
+  const { items, ready, error, user } = useLibrary();
+  const { configured } = useAuth();
   const [q, setQ] = useState("");
   const [type, setType] = useState<PlanType | "all">("all");
   const [onlyFav, setOnlyFav] = useState(false);
@@ -34,13 +36,28 @@ export default function LibraryPage() {
           <div>
             <h1 className="font-display text-4xl font-extrabold text-ink">Thư viện của cô 📚</h1>
             <p className="mt-1 text-stone-600">
-              Giáo án được tự động lưu ngay trên trình duyệt này. Xóa dữ liệu trình duyệt sẽ mất các bản đã lưu.
+              {user
+                ? "Giáo án được tự động lưu trong tài khoản của cô, dùng được trên mọi thiết bị."
+                : "Giáo án được tự động lưu trên trình duyệt này. Xóa dữ liệu trình duyệt sẽ mất các bản đã lưu."}
             </p>
           </div>
           <Link href="/lesson/new" className="rounded-full bg-teal-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-teal-200 hover:bg-teal-700">
             ✨ Soạn mới
           </Link>
         </div>
+
+        {configured && !user && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200">
+            <p className="text-sm text-amber-900">
+              ☁️ Đăng nhập để giáo án và hồ sơ lớp được lưu an toàn, mở được trên điện thoại và máy khác. Các bản hiện có sẽ được chuyển vào tài khoản.
+            </p>
+            <Link href="/login" className="rounded-full bg-teal-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-teal-700">
+              Đăng nhập / Đăng ký
+            </Link>
+          </div>
+        )}
+
+        {error && <p className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-700">Không tải được thư viện, vui lòng thử lại sau.</p>}
 
         <div className="flex flex-wrap items-center gap-2">
           <input
@@ -58,7 +75,7 @@ export default function LibraryPage() {
           <button onClick={() => setOnlyFav((v) => !v)} className={chip(onlyFav)}>⭐ Đã gắn sao</button>
         </div>
 
-        {!ready ? null : !items.length ? (
+        {!ready || error ? null : !items.length ? (
           <div className="rounded-3xl bg-white p-12 text-center ring-1 ring-amber-100">
             <p className="text-5xl">🗂️</p>
             <p className="mt-3 font-bold">Chưa có giáo án nào được lưu</p>
@@ -78,7 +95,7 @@ export default function LibraryPage() {
                       {style.emoji} {PLAN_TYPE_INFO.find((t) => t.id === i.type)?.label}
                     </span>
                     <button
-                      onClick={() => updatePlan(i.id, { favorite: !i.favorite })}
+                      onClick={() => void updatePlan(i.id, { favorite: !i.favorite })}
                       title={i.favorite ? "Bỏ sao" : "Gắn sao"}
                       className="text-base leading-none"
                     >
@@ -100,7 +117,7 @@ export default function LibraryPage() {
                       Mở
                     </Link>
                     <button
-                      onClick={() => confirm(`Xóa "${i.title}"?`) && removePlan(i.id)}
+                      onClick={() => confirm(`Xóa "${i.title}"?`) && void removePlan(i.id)}
                       className="text-sm font-semibold text-rose-600 hover:underline"
                     >
                       Xóa

@@ -12,11 +12,13 @@ import type { DocMeta } from "@/lib/schemas/lesson";
 import { useLessonStream } from "@/hooks/useLessonStream";
 import { useProfile } from "@/hooks/useProfile";
 import { getPlan, savePlan, updatePlan } from "@/lib/library";
+import { profileToClassInfo } from "@/lib/profiles";
 
 export default function NewLessonPage() {
   const { run, regenerate, revise, undo, load, demo, canUndo, versions, revising, reviseError, loading, error, partial, plan, planType, cached } =
     useLessonStream();
-  const { profile, update: updateProfile } = useProfile();
+  const profileState = useProfile();
+  const { profile, update: updateProfile } = profileState;
   const [values, setValues] = useState<FormValues>(EMPTY_FORM);
   const [submitted, setSubmitted] = useState<FormValues>(EMPTY_FORM); // dữ liệu của lần soạn gần nhất
   const [editing, setEditing] = useState(true); // true: hiện bảng thiết lập đầy đủ; false: thu gọn thành thanh tóm tắt
@@ -26,8 +28,10 @@ export default function NewLessonPage() {
   useEffect(() => setToday(new Date().toLocaleDateString("vi-VN")), []);
 
   // Tự lưu vào thư viện khi giáo án hoàn tất; chỉnh sửa/hoàn tác thì cập nhật cùng bản đã lưu.
+  // Các thao tác lưu chạy lần lượt để không tạo trùng bản.
   const savedId = useRef<string | null>(null);
   const savedPlan = useRef<unknown>(null);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
   useEffect(() => {
     if (!plan) {
       savedId.current = null; // bắt đầu soạn bản mới
@@ -36,22 +40,31 @@ export default function NewLessonPage() {
     }
     if (demo || plan === savedPlan.current) return;
     savedPlan.current = plan;
-    if (savedId.current && updatePlan(savedId.current, { plan, title: plan.title })) return;
-    savedId.current = savePlan({ type: planType, title: plan.title, form: submitted, request: toRequest(submitted), plan });
+    const entry = { type: planType, title: plan.title, form: submitted, request: toRequest(submitted), plan };
+    saveQueue.current = saveQueue.current
+      .then(async () => {
+        if (savedId.current && (await updatePlan(savedId.current, { plan, title: plan.title }))) return;
+        savedId.current = await savePlan(entry);
+      })
+      .catch((e) => console.error("save plan failed", e));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan, demo]);
 
   // Mở giáo án đã lưu từ thư viện: /lesson/new?open=<id>
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("open");
-    const item = id ? getPlan(id) : null;
-    if (!item) return;
-    savedId.current = item.id;
-    savedPlan.current = item.plan;
-    setValues(item.form);
-    setSubmitted(item.form);
-    setEditing(false);
-    load(item.request, item.plan, false);
+    if (!id) return;
+    void getPlan(id)
+      .then((item) => {
+        if (!item) return;
+        savedId.current = item.id;
+        savedPlan.current = item.plan;
+        setValues(item.form);
+        setSubmitted(item.form);
+        setEditing(false);
+        load(item.request, item.plan, false);
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -68,6 +81,7 @@ export default function NewLessonPage() {
       activity: hint.needsActivity ? v.activity.trim() : undefined,
       duration: hint.needsDuration && v.duration ? `${v.duration} phút` : undefined,
       notes: v.notes.trim() || undefined,
+      classInfo: profileToClassInfo(profile),
     };
   }
 
@@ -128,6 +142,9 @@ export default function NewLessonPage() {
             onDemo={onDemo}
             profile={profile}
             onProfileChange={updateProfile}
+            years={profileState.years}
+            onSwitchYear={profileState.switchYear}
+            profileSaved={profileState.saved}
             loading={loading}
             onSubmit={onSubmit}
           />

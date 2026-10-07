@@ -51,6 +51,7 @@ export function buildBasePrompt(req: LessonRequest) {
     `- Chủ đề: ${req.theme}`,
     req.branch ? `- Chủ đề nhánh / tuần: ${req.branch}` : null,
     req.activity ? `- Nội dung hoạt động: ${req.activity}` : null,
+    req.classInfo ? `- Đặc điểm lớp (soạn sát thực tế lớp này): ${req.classInfo}` : null,
     req.notes ? `- Ghi chú của giáo viên: ${req.notes}` : null,
   ]
     .filter(Boolean)

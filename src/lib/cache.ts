@@ -19,8 +19,9 @@ export function cacheKey(req: LessonRequest) {
     norm(req.duration),
     norm(req.activity),
     norm(req.notes),
+    norm(req.classInfo),
   ]);
-  return "plan:v4:" + createHash("sha256").update(raw).digest("hex").slice(0, 32);
+  return "plan:v5:" + createHash("sha256").update(raw).digest("hex").slice(0, 32);
 }
 
 export async function getCachedPlan(key: string, type: PlanType): Promise<Plan | null> {

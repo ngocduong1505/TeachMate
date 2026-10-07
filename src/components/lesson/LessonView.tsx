@@ -192,6 +192,23 @@ function Toolbar({
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  const track = (action: "download_word" | "copy" | "print") => {
+    if (demo) return;
+    fetch("/api/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action,
+        plan_type: planType,
+        age_group: plan.ageGroup,
+        domain: "domain" in plan ? plan.domain : undefined,
+        theme: plan.theme,
+        activity: plan.title,
+      }),
+      keepalive: true,
+    }).catch(() => {});
+  };
+
   async function exportWord() {
     setExporting(true);
     try {
@@ -202,6 +219,7 @@ function Toolbar({
       a.download = planFileName(planType, plan);
       a.click();
       URL.revokeObjectURL(url);
+      track("download_word");
     } finally {
       setExporting(false);
     }
@@ -211,6 +229,7 @@ function Toolbar({
     try {
       await navigator.clipboard.writeText(planToText(planType, plan));
       setCopied(true);
+      track("copy");
       setTimeout(() => setCopied(false), 2000);
     } catch {
       /* trình duyệt chặn clipboard: bỏ qua */
@@ -227,7 +246,10 @@ function Toolbar({
         <button onClick={copy} className={`${btn} bg-white text-stone-700 ring-1 ring-amber-200 hover:bg-amber-50`}>
           {copied ? "✓ Đã sao chép" : "📋 Sao chép"}
         </button>
-        <button onClick={() => window.print()} className={`${btn} bg-white text-stone-700 ring-1 ring-amber-200 hover:bg-amber-50`}>
+        <button onClick={() => {
+          track("print");
+          window.print();
+        }} className={`${btn} bg-white text-stone-700 ring-1 ring-amber-200 hover:bg-amber-50`}>
           🖨 In
         </button>
         {(cached || demo) && (

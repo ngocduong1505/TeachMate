@@ -4,6 +4,15 @@ import { adminConfigured, fetchAdmins, fetchLogs, getAdmin, type LogRow } from "
 import { addAdminAction, logoutAction, removeAdminAction } from "./actions";
 import { LoginForm } from "./LoginForm";
 
+const ACTION_LABEL: Record<string, string> = {
+  generate: "Tạo mới",
+  revise: "Chỉnh sửa",
+  download_word: "Tải Word",
+  copy: "Sao chép",
+  print: "In",
+};
+const USE_ACTIONS = ["generate", "revise"];
+
 export const metadata: Metadata = { title: "Quản trị – TeachMate", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
@@ -37,20 +46,23 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
   const [logs, admins] = await Promise.all([fetchLogs(admin.token), fetchAdmins(admin.token)]);
   const today = dayKey(new Date());
-  const attempts = logs.filter((l) => l.status !== "rate_limited");
+  const uses = logs.filter((l) => USE_ACTIONS.includes(l.action));
+  const downloads = logs.filter((l) => l.action === "download_word");
+  const attempts = uses.filter((l) => l.status !== "rate_limited");
   const ok = attempts.filter((l) => l.status === "success" || l.status === "cached").length;
-  const timed = logs.filter((l) => l.status === "success" && l.duration_ms);
+  const timed = uses.filter((l) => l.status === "success" && l.duration_ms);
   const avg = timed.length ? timed.reduce((s, l) => s + (l.duration_ms ?? 0), 0) / timed.length / 1000 : 0;
   const users = new Set(logs.map((l) => l.client_hash).filter(Boolean)).size;
 
-  const dayCount = new Map(count(logs, (l) => dayKey(l.created_at)));
+  const dayCount = new Map(count(uses, (l) => dayKey(l.created_at)));
   const days = Array.from({ length: 14 }, (_, i) => dayKey(new Date(Date.now() - (13 - i) * 86_400_000)));
   const max = Math.max(1, ...days.map((d) => dayCount.get(d) ?? 0));
 
-  const cachedPct = logs.length ? Math.round((logs.filter((l) => l.status === "cached").length / logs.length) * 100) : 0;
+  const cachedPct = uses.length ? Math.round((uses.filter((l) => l.status === "cached").length / uses.length) * 100) : 0;
   const stats: [string, string | number][] = [
     ["Hôm nay", dayCount.get(today) ?? 0],
-    ["30 ngày qua", logs.length],
+    ["30 ngày qua", uses.length],
+    ["Lượt tải Word", downloads.length],
     ["Tỉ lệ thành công", attempts.length ? `${Math.round((ok / attempts.length) * 100)}%` : "–"],
     ["Từ cache", `${cachedPct}%`],
     ["Thời gian TB", avg ? `${avg.toFixed(1)}s` : "–"],
@@ -98,7 +110,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         </section>
       ) : (
         <>
-          <section className="grid grid-cols-2 gap-3 md:grid-cols-6">
+          <section className="grid grid-cols-2 gap-3 md:grid-cols-7">
             {stats.map(([label, value]) => (
               <div key={label} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-amber-100">
                 <div className="text-xs font-semibold text-stone-500">{label}</div>
@@ -124,8 +136,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               </div>
             </div>
             <div className="space-y-4 rounded-2xl bg-white p-5 ring-1 ring-amber-100">
-              <Breakdown title="Loại kế hoạch" rows={count(logs, (l) => l.plan_type)} label={TYPE_LABEL} />
-              <Breakdown title="Nhóm tuổi" rows={count(logs, (l) => l.age_group)} />
+              <Breakdown title="Loại kế hoạch" rows={count(uses, (l) => l.plan_type)} label={TYPE_LABEL} />
+              <Breakdown title="Nhóm tuổi" rows={count(uses, (l) => l.age_group)} />
             </div>
           </section>
 
@@ -155,7 +167,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                       <td className="max-w-xs truncate px-2 py-2" title={`${l.theme ?? ""} / ${l.activity ?? ""}`}>
                         {[l.theme, l.activity].filter(Boolean).join(" · ")}
                       </td>
-                      <td className="px-2 py-2">{l.action === "revise" ? "Chỉnh sửa" : "Tạo mới"}</td>
+                      <td className="px-2 py-2">{ACTION_LABEL[l.action] ?? l.action}</td>
                       <td className="px-2 py-2">
                         <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${STATUS_STYLE[l.status] ?? ""}`}>
                           {STATUS_LABEL[l.status] ?? l.status}

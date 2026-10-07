@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+export const EVENT_ACTIONS = ["download_word", "copy", "print"] as const;
+
 export type UsageStatus = "success" | "cached" | "rate_limited" | "error";
 
 export type UsageEntry = {
@@ -8,7 +10,7 @@ export type UsageEntry = {
   domain?: string;
   theme?: string;
   activity?: string;
-  action: "generate" | "revise";
+  action: "generate" | "revise" | "download_word" | "copy" | "print";
   status: UsageStatus;
   cached?: boolean;
   error?: string;

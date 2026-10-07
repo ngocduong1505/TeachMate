@@ -125,8 +125,8 @@ export function useLessonStream() {
     if (lastInput.current) void execute(lastInput.current, true);
   }, [execute]);
 
-  /** Nạp ngay một giáo án có sẵn (không gọi AI); vẫn chỉnh sửa, xuất file... như bản vừa soạn. */
-  const load = useCallback((input: LessonRequest, sample: Plan) => {
+  /** Nạp ngay một giáo án có sẵn (mẫu hoặc đã lưu, không gọi AI); vẫn chỉnh sửa, xuất file... như bản vừa soạn. */
+  const load = useCallback((input: LessonRequest, sample: Plan, isDemo = true) => {
     abortRef.current?.abort();
     lastInput.current = input;
     setPlanType(input.type);
@@ -135,7 +135,7 @@ export function useLessonStream() {
     setError(null);
     setReviseError(null);
     setCached(false);
-    setDemo(true);
+    setDemo(isDemo);
     setHistory([]);
     setPlan(sample);
     setPartial(sample as PartialPlan);

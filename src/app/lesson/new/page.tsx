@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LessonView } from "@/components/lesson/LessonView";
 import { SetupPanel } from "@/components/lesson/SetupPanel";
 import { SummaryBar } from "@/components/lesson/SummaryBar";
@@ -11,6 +11,7 @@ import { AGE_GROUPS } from "@/lib/curriculum";
 import type { DocMeta } from "@/lib/schemas/lesson";
 import { useLessonStream } from "@/hooks/useLessonStream";
 import { useProfile } from "@/hooks/useProfile";
+import { getPlan, savePlan, updatePlan } from "@/lib/library";
 
 export default function NewLessonPage() {
   const { run, regenerate, revise, undo, load, demo, canUndo, versions, revising, reviseError, loading, error, partial, plan, planType, cached } =
@@ -23,6 +24,36 @@ export default function NewLessonPage() {
 
   // Tính ngày ở client để không lệch giữa server và trình duyệt
   useEffect(() => setToday(new Date().toLocaleDateString("vi-VN")), []);
+
+  // Tự lưu vào thư viện khi giáo án hoàn tất; chỉnh sửa/hoàn tác thì cập nhật cùng bản đã lưu.
+  const savedId = useRef<string | null>(null);
+  const savedPlan = useRef<unknown>(null);
+  useEffect(() => {
+    if (!plan) {
+      savedId.current = null; // bắt đầu soạn bản mới
+      savedPlan.current = null;
+      return;
+    }
+    if (demo || plan === savedPlan.current) return;
+    savedPlan.current = plan;
+    if (savedId.current && updatePlan(savedId.current, { plan, title: plan.title })) return;
+    savedId.current = savePlan({ type: planType, title: plan.title, form: submitted, request: toRequest(submitted), plan });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan, demo]);
+
+  // Mở giáo án đã lưu từ thư viện: /lesson/new?open=<id>
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("open");
+    const item = id ? getPlan(id) : null;
+    if (!item) return;
+    savedId.current = item.id;
+    savedPlan.current = item.plan;
+    setValues(item.form);
+    setSubmitted(item.form);
+    setEditing(false);
+    load(item.request, item.plan, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const patch = (p: Partial<FormValues>) => setValues((v) => ({ ...v, ...p }));
 

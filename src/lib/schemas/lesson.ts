@@ -1,3 +1,4 @@
+import type { ExportTemplate } from "@/lib/exportTemplate";
 import { z } from "zod";
 
 export const PLAN_TYPES = ["lesson", "corner", "outdoor", "weekly"] as const;
@@ -13,6 +14,7 @@ export const requestSchema = z
     duration: z.string().max(30).optional(), // thời lượng mong muốn, ví dụ "25 phút"
     activity: z.string().max(150).optional(), // không cần với kế hoạch tuần
     notes: z.string().max(500).optional(),
+    classInfo: z.string().max(300).optional(), // sĩ số, đặc điểm lớp (từ hồ sơ lớp)
     fresh: z.boolean().optional(), // bỏ qua cache, tạo bản mới
     // Chỉnh sửa bản đã có: gửi kèm bản hiện tại và yêu cầu của cô. Kết quả không dùng cache.
     revise: z
@@ -153,4 +155,5 @@ export type DocMeta = {
   className?: string;
   teacher?: string;
   date?: string; // dd/mm/yyyy
+  template?: ExportTemplate; // mẫu xuất theo trường
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LessonView } from "@/components/lesson/LessonView";
 import { SetupPanel } from "@/components/lesson/SetupPanel";
 import { SummaryBar } from "@/components/lesson/SummaryBar";
@@ -11,11 +11,16 @@ import { AGE_GROUPS } from "@/lib/curriculum";
 import type { DocMeta } from "@/lib/schemas/lesson";
 import { useLessonStream } from "@/hooks/useLessonStream";
 import { useProfile } from "@/hooks/useProfile";
+import { useExportTemplate } from "@/hooks/useExportTemplate";
+import { getPlan, savePlan, updatePlan } from "@/lib/library";
+import { profileToClassInfo } from "@/lib/profiles";
 
 export default function NewLessonPage() {
-  const { run, regenerate, revise, undo, load, demo, canUndo, versions, revising, reviseError, loading, error, partial, plan, planType, cached } =
+  const { run, regenerate, revise, adapt, origin, undo, load, demo, canUndo, versions, revising, reviseError, loading, error, partial, plan, planType, cached } =
     useLessonStream();
-  const { profile, update: updateProfile } = useProfile();
+  const profileState = useProfile();
+  const { template, update: updateTemplate } = useExportTemplate();
+  const { profile, update: updateProfile } = profileState;
   const [values, setValues] = useState<FormValues>(EMPTY_FORM);
   const [submitted, setSubmitted] = useState<FormValues>(EMPTY_FORM); // dữ liệu của lần soạn gần nhất
   const [editing, setEditing] = useState(true); // true: hiện bảng thiết lập đầy đủ; false: thu gọn thành thanh tóm tắt
@@ -23,6 +28,60 @@ export default function NewLessonPage() {
 
   // Tính ngày ở client để không lệch giữa server và trình duyệt
   useEffect(() => setToday(new Date().toLocaleDateString("vi-VN")), []);
+
+  // Tự lưu vào thư viện khi giáo án hoàn tất; chỉnh sửa/hoàn tác thì cập nhật cùng bản đã lưu.
+  // Các thao tác lưu chạy lần lượt để không tạo trùng bản.
+  const savedId = useRef<string | null>(null);
+  const savedPlan = useRef<unknown>(null);
+  const lastOrigin = useRef(0);
+  const pendingAdapt = useRef<FormValues | null>(null);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
+  useEffect(() => {
+    if (!plan) {
+      savedId.current = null; // bắt đầu soạn bản mới
+      savedPlan.current = null;
+      return;
+    }
+    if (demo || plan === savedPlan.current) return;
+    savedPlan.current = plan;
+    // Chuyển sang độ tuổi khác: lưu thành bản mới với thông tin của lớp mới
+    let form = submitted;
+    if (origin !== lastOrigin.current) {
+      lastOrigin.current = origin;
+      savedId.current = null;
+      if (pendingAdapt.current) {
+        form = pendingAdapt.current;
+        pendingAdapt.current = null;
+        setSubmitted(form);
+      }
+    }
+    const entry = { type: planType, title: plan.title, form, request: toRequest(form), plan };
+    saveQueue.current = saveQueue.current
+      .then(async () => {
+        if (savedId.current && (await updatePlan(savedId.current, { plan, title: plan.title }))) return;
+        savedId.current = await savePlan(entry);
+      })
+      .catch((e) => console.error("save plan failed", e));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan, demo, origin]);
+
+  // Mở giáo án đã lưu từ thư viện: /lesson/new?open=<id>
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("open");
+    if (!id) return;
+    void getPlan(id)
+      .then((item) => {
+        if (!item) return;
+        savedId.current = item.id;
+        savedPlan.current = item.plan;
+        setValues(item.form);
+        setSubmitted(item.form);
+        setEditing(false);
+        load(item.request, item.plan, false);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const patch = (p: Partial<FormValues>) => setValues((v) => ({ ...v, ...p }));
 
@@ -37,6 +96,7 @@ export default function NewLessonPage() {
       activity: hint.needsActivity ? v.activity.trim() : undefined,
       duration: hint.needsDuration && v.duration ? `${v.duration} phút` : undefined,
       notes: v.notes.trim() || undefined,
+      classInfo: profileToClassInfo(profile),
     };
   }
 
@@ -57,6 +117,17 @@ export default function NewLessonPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  /** Chuyển giáo án đang xem sang độ tuổi khác (AI điều chỉnh, lưu thành bản mới). */
+  function onAdapt(ageGroup: FormValues["ageGroup"]) {
+    const next = { ...submitted, ageGroup, duration: "" };
+    const age = AGE_GROUPS.find((a) => a.id === ageGroup);
+    pendingAdapt.current = next;
+    adapt(
+      toRequest(next),
+      `Chuyển giáo án này sang ${age?.label}. Giữ nguyên chủ đề và hoạt động chính; điều chỉnh mục tiêu, mức độ khó, thời lượng (${age?.minutes} phút), đồ dùng, cách tổ chức và ngôn ngữ cho phù hợp độ tuổi mới. Cập nhật trường ageGroup và duration.`,
+    );
+  }
+
   function edit() {
     setEditing(true);
     requestAnimationFrame(() => document.getElementById("setup")?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -74,6 +145,7 @@ export default function NewLessonPage() {
     className: profile.className ? `${profile.className} (${ageLabel.match(/\((.*)\)/)?.[1] ?? ""})` : ageLabel,
     teacher: profile.teacher,
     date: today,
+    template,
   };
   const hasResult = !!partial || loading || !!error;
 
@@ -97,6 +169,9 @@ export default function NewLessonPage() {
             onDemo={onDemo}
             profile={profile}
             onProfileChange={updateProfile}
+            years={profileState.years}
+            onSwitchYear={profileState.switchYear}
+            profileSaved={profileState.saved}
             loading={loading}
             onSubmit={onSubmit}
           />
@@ -115,6 +190,9 @@ export default function NewLessonPage() {
               domain={submitted.domain}
               meta={meta}
               onRegenerate={regenerate}
+              ageGroup={submitted.ageGroup}
+              onAdapt={onAdapt}
+              onTemplateChange={updateTemplate}
               onRevise={revise}
               onUndo={undo}
               canUndo={canUndo}

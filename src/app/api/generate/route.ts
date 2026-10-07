@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { cacheKey, getCachedPlan, setCachedPlan } from "@/lib/cache";
 import { generateStructuredStream } from "@/lib/gemini";
 import { buildPrompt } from "@/lib/prompts/lesson";
 import { checkRateLimit, clientId } from "@/lib/ratelimit";
 import { requestSchema, schemaByType } from "@/lib/schemas/lesson";
+import { logUsage, type UsageStatus } from "@/lib/usageLog";
 
 export const maxDuration = 120;
 
@@ -25,6 +26,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Dữ liệu không hợp lệ" }, { status: 400 });
   }
   const input = parsed.data;
+  const startedAt = Date.now();
+  const client = clientId(request);
+  const log = (status: UsageStatus, error?: string) =>
+    after(() =>
+      logUsage({
+        plan_type: input.type,
+        age_group: input.ageGroup,
+        domain: input.domain,
+        theme: input.theme,
+        activity: input.activity,
+        action: input.revise ? "revise" : "generate",
+        status,
+        cached: status === "cached",
+        error,
+        duration_ms: Date.now() - startedAt,
+        client_id: client,
+      }),
+    );
   const key = cacheKey(input);
   const schema = schemaByType[input.type];
 
@@ -40,6 +59,7 @@ export async function POST(request: Request) {
   if (!input.fresh && !revising) {
     const cached = await getCachedPlan(key, input.type);
     if (cached) {
+      log("cached");
       const json = JSON.stringify(cached);
       return ndjson(
         new ReadableStream({
@@ -56,8 +76,9 @@ export async function POST(request: Request) {
     }
   }
 
-  const limit = await checkRateLimit(clientId(request));
+  const limit = await checkRateLimit(client);
   if (!limit.ok) {
+    log("rate_limited", limit.scope);
     const message =
       limit.scope === "global"
         ? "Hệ thống đã hết lượt tạo giáo án hôm nay, vui lòng quay lại sau."
@@ -74,6 +95,7 @@ export async function POST(request: Request) {
   } catch (e) {
     const status = (e as { status?: number })?.status;
     console.error("generate failed", e);
+    log("error", `start:${status ?? "unknown"}`);
     return NextResponse.json(
       { error: status === 429 ? "Hệ thống đang quá tải, vui lòng thử lại sau ít phút." : "Không tạo được giáo án." },
       { status: status === 429 ? 429 : 500 },
@@ -93,8 +115,10 @@ export async function POST(request: Request) {
           const plan = schema.parse(JSON.parse(text));
           if (!revising) await setCachedPlan(key, plan);
           controller.enqueue(line({ t: "done" }));
+          log("success");
         } catch (e) {
           console.error("stream failed", e);
+          log("error", e instanceof Error ? e.name : "stream");
           const invalid = e instanceof SyntaxError || (e as { name?: string })?.name === "ZodError";
           controller.enqueue(
             line({

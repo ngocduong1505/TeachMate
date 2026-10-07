@@ -34,11 +34,14 @@ type Props = {
   onDemo: () => void;
   profile: Profile;
   onProfileChange: (patch: Partial<Profile>) => void;
+  years: string[];
+  onSwitchYear: (year: string) => void;
+  profileSaved: boolean; // đã đăng nhập: hồ sơ lưu trên tài khoản
   loading: boolean;
   onSubmit: () => void;
 };
 
-export function SetupPanel({ values: v, onChange, onPickSample, onDemo, profile, onProfileChange, loading, onSubmit }: Props) {
+export function SetupPanel({ values: v, onChange, onPickSample, onDemo, profile, onProfileChange, years, onSwitchYear, profileSaved, loading, onSubmit }: Props) {
   const hint = TYPE_HINTS[v.type];
   const age = AGE_GROUPS.find((a) => a.id === v.ageGroup);
   const samples = SAMPLES[v.type];
@@ -247,7 +250,33 @@ export function SetupPanel({ values: v, onChange, onPickSample, onDemo, profile,
           </div>
 
           <div className="rounded-2xl bg-amber-50/70 p-5">
-            <p className="text-sm font-bold text-amber-900">🏫 Thông tin trường &amp; giáo viên (in trên file Word)</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-bold text-amber-900">🏫 Hồ sơ lớp</p>
+              <label className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                Năm học
+                <select
+                  value={profile.schoolYear}
+                  onChange={(e) => onSwitchYear(e.target.value)}
+                  className="rounded-lg border border-amber-200 bg-white px-2 py-1 text-sm"
+                >
+                  {years.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const latest = Number(years[0]?.slice(0, 4)) || new Date().getFullYear();
+                    onSwitchYear(`${latest + 1}-${latest + 2}`);
+                  }}
+                  className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-teal-700 ring-1 ring-amber-200 hover:bg-amber-50"
+                >
+                  + Năm mới
+                </button>
+              </label>
+            </div>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <input
                 value={profile.school}
@@ -273,8 +302,28 @@ export function SetupPanel({ values: v, onChange, onPickSample, onDemo, profile,
                 className={input}
                 placeholder="Giáo viên soạn bài"
               />
+              <input
+                type="number"
+                min={1}
+                max={60}
+                value={profile.classSize}
+                onChange={(e) => onProfileChange({ classSize: e.target.value })}
+                className={input}
+                placeholder="Sĩ số lớp (số trẻ)"
+              />
+              <textarea
+                rows={2}
+                maxLength={250}
+                value={profile.classTraits}
+                onChange={(e) => onProfileChange({ classTraits: e.target.value })}
+                className={`${input} resize-none sm:col-span-2`}
+                placeholder="Đặc điểm lớp, ví dụ: nhiều bé nhút nhát, có máy chiếu, sân chơi nhỏ..."
+              />
             </div>
-            <p className="mt-2 text-xs text-stone-500">Lưu ngay trên máy của cô, không gửi lên máy chủ hay cho AI.</p>
+            <p className="mt-2 text-xs text-stone-500">
+              Tên trường, tổ, lớp và giáo viên chỉ dùng để in trên file Word. Sĩ số và đặc điểm lớp được gửi cho AI để soạn sát lớp (cô đừng ghi tên trẻ).{" "}
+              {profileSaved ? "Hồ sơ được lưu trong tài khoản của cô." : "Hồ sơ đang lưu trên máy này, đăng nhập để dùng ở mọi thiết bị."}
+            </p>
           </div>
         </div>
       </section>

@@ -9,6 +9,9 @@ export function CardsView({ partial }: { partial: DeepPartial<Lesson> }) {
           <Group title="Kiến thức" items={partial.objectives.knowledge} dot="bg-emerald-400" />
           <Group title="Kỹ năng" items={partial.objectives.skills} dot="bg-sky-400" />
           <Group title="Thái độ" items={partial.objectives.attitude} dot="bg-rose-400" />
+          {!!partial.objectives.competencies?.length && (
+            <Group title="Phẩm chất, năng lực" items={partial.objectives.competencies} dot="bg-violet-400" />
+          )}
         </Section>
       )}
 

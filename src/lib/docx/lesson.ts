@@ -141,6 +141,9 @@ function objectivesAndPrep(l: Lesson | CornerPlan | OutdoorPlan): Block[] {
     ...bullets(l.objectives.skills),
     para("3. Thái độ", { bold: true }),
     ...bullets(l.objectives.attitude),
+    ...(l.objectives.competencies?.length
+      ? [para("4. Phẩm chất, năng lực hướng tới", { bold: true }), ...bullets(l.objectives.competencies)]
+      : []),
     heading("II. CHUẨN BỊ"),
     para("1. Đồ dùng của cô giáo:", { bold: true }),
     ...bullets(l.preparation.teacher),

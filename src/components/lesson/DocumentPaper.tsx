@@ -61,6 +61,8 @@ function ObjectivesAndPrep({ p }: { p: DeepPartial<Lesson> }) {
           <Bullets items={p.objectives.skills} />
           {p.objectives.attitude && <p className="font-bold">3. Thái độ</p>}
           <Bullets items={p.objectives.attitude} />
+          {!!p.objectives.competencies?.length && <p className="font-bold">4. Phẩm chất, năng lực hướng tới</p>}
+          <Bullets items={p.objectives.competencies} />
         </>
       )}
       {p.preparation && (

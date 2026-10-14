@@ -17,6 +17,7 @@ function objectives(l: Lesson | CornerPlan | OutdoorPlan) {
     list(l.objectives.skills),
     "3. Thái độ",
     list(l.objectives.attitude),
+    ...(l.objectives.competencies?.length ? ["4. Phẩm chất, năng lực hướng tới", list(l.objectives.competencies)] : []),
     "",
     "II. CHUẨN BỊ",
     "1. Đồ dùng của cô giáo",

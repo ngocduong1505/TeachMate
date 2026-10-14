@@ -45,6 +45,10 @@ const objectivesSchema = z.object({
   knowledge: z.array(z.string()).describe("Kiến thức"),
   skills: z.array(z.string()).describe("Kỹ năng"),
   attitude: z.array(z.string()).describe("Thái độ"),
+  competencies: z
+    .array(z.string())
+    .optional()
+    .describe("Phẩm chất, năng lực hướng tới (CT thí điểm 388): tên năng lực/phẩm chất + biểu hiện của trẻ trong hoạt động"),
 });
 
 const preparationSchema = z.object({

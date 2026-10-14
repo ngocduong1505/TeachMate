@@ -4,7 +4,7 @@ import { DOMAIN_STYLE, shortDomainLabel } from "@/components/lesson/theme";
 
 const FEATURES = [
   { emoji: "⚡", title: "Soạn trong nửa phút", text: "Chọn lớp, lĩnh vực, chủ đề, giáo án đầy đủ mục tiêu, chuẩn bị và tiến hành hiện ra ngay." },
-  { emoji: "📚", title: "Bám chương trình GDMN", text: "Cấu trúc theo Chương trình giáo dục mầm non, phù hợp từng độ tuổi từ nhà trẻ đến mẫu giáo lớn." },
+  { emoji: "📚", title: "Bám chương trình GDMN thí điểm (QĐ 388)", text: "Mục tiêu hướng tới 4 phẩm chất, 5 năng lực của Chương trình giáo dục mầm non thí điểm, phù hợp từng độ tuổi từ nhà trẻ đến mẫu giáo lớn." },
   { emoji: "📄", title: "Xuất file Word", text: "Tải về .docx đúng định dạng để chỉnh sửa, in và nộp cho nhà trường." },
 ];
 
